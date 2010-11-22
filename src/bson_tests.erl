@@ -14,7 +14,7 @@ bson_test() ->
 	{'EXIT', {missing_label, _}} = (catch bson:at (d, Doc)),
 	[a, 1] = bson:include ([a], Doc),
 	[a, 1] = bson:exclude ([b,c], Doc),
-	[b, [x, 2, y, 3], a, 1, c, 4.2] = bson:update(c, 4.2, Doc),
+	[b, [x, 2, y, 3], a, 1, c, 4.2] = bson:update (c, 4.2, Doc),
 	[b, 0, a, 1, c, 2, d, 3] = bson:merge ([c, 2, d, 3, b, 0], Doc).
 
 twotime() ->

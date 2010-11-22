@@ -13,7 +13,7 @@
 %% Document %%
 
 -type document() :: [label() | value()]. % labels and values must alternate
-% A document is a list of label-value pairs (à la associative array, dictionary, record), but the actual pair constructors are elided, in other words, it's a flattened version of [{label(), value()}] where tuple braces are removed.
+% A document is a list of label-value pairs (a' la associative array, dictionary, record), but the actual pair constructors are elided, in other words, it's a flattened version of [{label(), value()}] where tuple braces are removed.
 % This was done to reduce typing and to distinguish an array from a document which are both lists. Some values are tuples. For example, [{uuid, <<"abc">>}] is an array of uuid(), but if document had tuple fields it would also be a document with field name uuid and value "abc". But with flattening a documents first element is always an atom and an array can never have an atom element because we tagged the bson symbol type, ie. {symbol, atom()}.
 -type label() :: atom().
 
