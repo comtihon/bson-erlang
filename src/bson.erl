@@ -51,7 +51,7 @@ lookup (Label, [_, _ | Doc]) -> lookup (Label, Doc).
 -spec at (label(), document()) -> value().
 % Value of field in document, error if missing
 at (Label, Document) -> case lookup (Label, Document) of
-	{} -> erlang:error (missing_label, [Label, Document]);
+	{} -> erlang:error (missing_field, [Label, Document]);
 	{Value} -> Value end.
 
 -spec include ([label()], document()) -> document().
