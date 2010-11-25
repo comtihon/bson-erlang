@@ -1,52 +1,79 @@
 % A BSON document is a JSON-like object with a standard binary encoding defined at bsonspec.org. This implements version 1.0 of that spec.
 -module (bson).
 
+-export_type ([maybe/1]).
 -export_type ([document/0, label/0, value/0]).
 -export_type ([bin/0, bfunction/0, uuid/0, md5/0, userdefined/0]).
 -export_type ([mongostamp/0, minmaxkey/0]).
 -export_type ([regex/0, unixtime/0]).
 -export_type ([javascript/0]).
--export_type ([objectid/0]).
+-export_type ([objectid/0, unixsecs/0]).
 
--compile (export_all).
+-export ([lookup/2, at/2, include/2, exclude/2, update/3, merge/2, append/2]).
+-export ([doc_foldl/3, doc_foldr/3, fields/1, document/1]).
+-export ([utf8/1, str/1]).
+-export ([timenow/0, ms_precision/1, secs_to_unixtime/1, unixtime_to_secs/1]).
+-export ([objectid/3, objectid_time/1]).
 
-%% Document %%
+-type maybe(A) :: {A} | {}.
 
--type document() :: [label() | value()]. % labels and values must alternate
-% A document is a list of label-value pairs (a' la associative array, dictionary, record), but the actual pair constructors are elided, in other words, it's a flattened version of [{label(), value()}] where tuple braces are removed.
-% This was done to reduce typing and to distinguish an array from a document which are both lists. Some values are tuples. For example, [{uuid, <<"abc">>}] is an array of uuid(), but if document had tuple fields it would also be a document with field name uuid and value "abc". But with flattening a documents first element is always an atom and an array can never have an atom element because we tagged the bson symbol type, ie. {symbol, atom()}.
+% Document %
+
+-type document() :: tuple(). % {label(), value(), label(), value(), ...}.
+% Conceptually a document is a list of label-value pairs (associative array, dictionary, record). However, for read/write-ability, it is implemented as a flat tuple, ie. the list becomes a tuple and the pair braces are elided, so you just have alternating labels and values where each value is associated with the previous label.
+% To distinguish a tagged value such as {uuid, _} (see value() type below) from a document with field name 'uuid' we made sure all valid tagged value types have an odd number of elements (documents have even number of elements). So actually only {bin, uuid, _} is a valid value, {uuid, _} is a document.
+
 -type label() :: atom().
 
--spec doc_foldl (fun((label(), value(), A) -> A), A, document()) -> A.
-doc_foldl (_Fun, Acc, []) -> Acc;
-doc_foldl (Fun, Acc, [Label, Value | Doc]) ->
-	Acc1 = Fun (Label, Value, Acc),
-	doc_foldl (Fun, Acc1, Doc).
+-spec doc_foldl (fun ((label(), value(), A) -> A), A, document()) -> A.
+doc_foldl (Fun, Acc, Doc) -> doc_foldlN (Fun, Acc, Doc, 0, tuple_size (Doc) div 2).
 
--spec doc_foldr (fun((label(), value(), A) -> A), A, document()) -> A.
-doc_foldr (_Fun, Acc, []) -> Acc;
-doc_foldr (Fun, Acc, [Label, Value | Doc]) -> Fun (Label, Value, doc_foldl (Fun, Acc, Doc)).
+-spec doc_foldlN (fun ((label(), value(), A) -> A), A, document(), integer(), integer()) -> A.
+% Fold over fields from first index (inclusive) to second index (exclusive), zero-based index.
+doc_foldlN (_, Acc, _, High, High) -> Acc;
+doc_foldlN (Fun, Acc, Doc, Low, High) ->
+	Acc1 = Fun (element (Low * 2 + 1, Doc), element (Low * 2 + 2, Doc), Acc),
+	doc_foldlN (Fun, Acc1, Doc, Low + 1, High).
+
+-spec doc_foldr (fun ((label(), value(), A) -> A), A, document()) -> A.
+doc_foldr (Fun, Acc, Doc) -> doc_foldrN (Fun, Acc, Doc, 0, tuple_size (Doc) div 2).
+
+-spec doc_foldrN (fun ((label(), value(), A) -> A), A, document(), integer(), integer()) -> A.
+% Fold over fields from second index (exclusive) to first index (inclusive), zero-based index.
+doc_foldrN (_, Acc, _, Low, Low) -> Acc;
+doc_foldrN (Fun, Acc, Doc, Low, High) ->
+	Acc1 = Fun (element (High * 2 - 1, Doc), element (High * 2, Doc), Acc),
+	doc_foldlN (Fun, Acc1, Doc, Low, High - 1).
 
 -spec fields (document()) -> [{label(), value()}].
 % Convert document to a list of all its fields
-fields ([]) -> [];
-fields ([Label, Value | Document]) -> [{Label, Value} | fields (Document)].
+fields (Doc) -> doc_foldr (fun (Label, Value, List) -> [{Label, Value} | List] end, Doc, []).
 
 -spec document ([{label(), value()}]) -> document().
 % Convert list of fields to a document
-document ([]) -> [];
-document ([{Label, Value} | Fields]) -> [Label, Value | document (Fields)].
+document (Fields) -> list_to_tuple (flatten (Fields)).
 
--spec is_document ([_]) -> boolean().
-% Bson documents and arrays are both lists but documents have an atom as its first element and arrays cannot contain an atom (atom() is not a valid value() type, but symbol() is). If the list is empty we assume array.
-is_document ([]) -> false;
-is_document ([Elem | _]) -> is_atom (Elem).
+-spec flatten ([{label(), value()}]) -> [label() | value()].
+% Flatten list by removing tuple constructors
+flatten ([]) -> [];
+flatten ([{Label, Value} | Fields]) -> [Label, Value | flatten (Fields)].
 
--spec lookup (label(), document()) -> {value()} | {}.
+-spec lookup (label(), document()) -> maybe (value()).
 % Value of field in document if there
-lookup (_, []) -> {};
-lookup (Label, [Key, Value | _]) when Label == Key -> {Value};
-lookup (Label, [_, _ | Doc]) -> lookup (Label, Doc).
+lookup (Label, Doc) -> case find (Label, Doc) of
+	{Index} -> {element (Index * 2 + 2, Doc)};
+	{} -> {} end.
+
+-spec find (label(), document) -> maybe (integer()).
+% Index of field in document if there
+find (Label, Doc) -> findN (Label, Doc, 0, tuple_size (Doc) div 2).
+
+-spec findN (label(), document(), integer(), integer()) -> maybe (integer()).
+% Find field index in document from first index (inclusive) to second index (exclusive).
+findN (_Label, _Doc, High, High) -> {};
+findN (Label, Doc, Low, High) -> case element (Low * 2 + 1, Doc) of
+	Label -> {Low};
+	_ -> findN (Label, Doc, Low + 1, High) end.
 
 -spec at (label(), document()) -> value().
 % Value of field in document, error if missing
@@ -60,7 +87,7 @@ include (Labels, Document) ->
 	Fun = fun (Label, Doc) -> case lookup (Label, Document) of
 		{Value} -> [Label, Value | Doc];
 		{} -> Doc end end,
-	lists:foldr (Fun, [], Labels).
+	list_to_tuple (lists:foldr (Fun, [], Labels)).
 
 -spec exclude ([label()], document()) -> document().
 % Remove given fields from document
@@ -68,26 +95,25 @@ exclude (Labels, Document) ->
 	Fun = fun (Label, Value, Doc) -> case lists:member (Label, Labels) of
 		false -> [Label, Value | Doc];
 		true -> Doc end end,
-	doc_foldr (Fun, [], Document).
-
--spec splitat (label(), document()) -> {document(), value(), document()} | {}.
-splitat (_, []) -> {};
-splitat (Label, [Key, Value | Doc]) when Label == Key -> {[], Value, Doc};
-splitat (Label, [Key, Value | Doc]) -> case splitat (Label, Doc) of
-	{Prefix, Match, Suffix} -> {[Key, Value | Prefix], Match, Suffix};
-	{} -> {} end.
+	list_to_tuple (doc_foldr (Fun, [], Document)).
 
 -spec update (label(), value(), document()) -> document().
 % Replace field with new value, adding to end if new
-update (Label, Value, Document) -> case splitat (Label, Document) of
-	{Prefix, _, Suffix} -> Prefix ++ [Label, Value | Suffix];
-	{} -> Document ++ [Label, Value] end.
+update (Label, Value, Document) -> case find (Label, Document) of
+	{Index} -> setelement (Index * 2 + 2, Document, Value);
+	{} ->
+		Doc = erlang:append_element (Document, Label),
+		erlang:append_element (Doc, Value) end.
 
 -spec merge (document(), document()) -> document().
-% First doc overrides second with new fields added at end
+% First doc overrides second with new fields added at end of second doc
 merge (UpDoc, BaseDoc) ->
 	Fun = fun (Label, Value, Doc) -> update (Label, Value, Doc) end,
 	doc_foldl (Fun, BaseDoc, UpDoc).
+
+-spec append (document(), document()) -> document().
+% Append two documents together
+append (Doc1, Doc2) -> list_to_tuple (tuple_to_list (Doc1) ++ tuple_to_list (Doc2)).
 
 % Value %
 
@@ -107,15 +133,17 @@ merge (UpDoc, BaseDoc) ->
 	null |
 	regex() |
 	javascript() |
-	symbol() |
+	atom() |
 	integer() |
 	mongostamp() |
 	minmaxkey().
 
-% List %
+% Note, No value() can be a tuple with even number of elements because then it would be ambiguous with document(). Therefore all tagged values defined below have odd number of elements.
+
+% Array %
 
 -type arr() :: [value()].
-% Caution, a string() will be interpreted as an array of integers. You must encode strings as utf8, see below.
+% Caution, a string() will be interpreted as an array of integers. You must supply strings as utf8 binary, see below.
 
 % String %
 
@@ -137,70 +165,60 @@ str (CharData) -> case unicode:characters_to_list (CharData) of
 	{incomplete, _Bin, _Rest} -> erlang:error (unicode_incomplete, [CharData]);
 	Str -> Str end.
 
-%% Binary %%
+% Binary %
 
--type bin() :: {bin, binary()}.
--type bfunction() :: {bfunction, binary()}.
--type uuid() :: {uuid, binary()}.
--type md5() :: {md5, binary()}.
--type userdefined() :: {userdefined, binary()}.
+-type bin() :: {bin, bin, binary()}.
+-type bfunction() :: {bin, function, binary()}.
+-type uuid() :: {bin, uuid, binary()}.
+-type md5() :: {bin, md5, binary()}.
+-type userdefined() :: {bin, userdefined, binary()}.
 
-%% Special %%
+% Special %
 
--type symbol() :: {symbol, atom()}.
--type mongostamp() :: {mongostamp, integer()}.
--type minmaxkey() :: minkey | maxkey.
+-type mongostamp() :: {mongostamp, integer(), integer()}.
+% 4-byte increment, 4-byte timestamp. 0 timestamp has special semantics
+-type minmaxkey() :: 'MIN_KEY' | 'MAX_KEY'.
+% Special values that compare lower/higher than all other bson values
+
+% Regex %
 
 -type regex() :: {regex, utf8(), utf8()}.  % pattern and options
 
-%% Datetime %%
+% Datetime %
 
--type unixtime() :: {unixtime, integer()}.
-% Unix/POSIX time in milliseconds. Ie. UTC milliseconds since Unix epoch (Jan 1, 1970)
+-type unixtime() :: {integer(), integer(), integer()}. % {MegaSecs, Secs, MicroSecs}
+% Unix time in Erlang now/os:timstamp format, but only to millisecond precision when serialized.
 
 -spec timenow () -> unixtime(). % IO
-% Current unixtime
-timenow() -> erltime_to_unixtime (os:timestamp()).
+% Current unixtime to millisecond precision, ie. MicroSecs is always a multiple of 1000.
+timenow() -> ms_precision (os:timestamp()).
 
--type erltime() :: {integer(), integer(), integer()}. % {MegaSecs, Secs, MicroSecs}
-% Unix time in Erlang now/os:timstamp format
+-spec ms_precision (unixtime()) -> unixtime().
+% Truncate microsecs to millisecs since bson drops microsecs anyway, so time will be equal before and after serialization.
+ms_precision ({MegaSecs, Secs, MicroSecs}) ->
+	{MegaSecs, Secs, MicroSecs div 1000 * 1000}.
 
--spec erltime_to_unixtime (erltime()) -> unixtime().
-erltime_to_unixtime ({MegaSecs, Secs, MicroSecs}) ->
-	{unixtime, MegaSecs * 1000000000 + Secs * 1000 + MicroSecs div 1000}.
+-type unixsecs() :: integer(). % Unix Time in seconds
 
--spec unixtime_to_erltime (unixtime()) -> erltime().
-unixtime_to_erltime ({unixtime, MilliSecs}) ->
-	{MilliSecs div 1000000000, (MilliSecs div 1000) rem 1000000, (MilliSecs * 1000) rem 1000000}.
+-spec secs_to_unixtime (unixsecs()) -> unixtime().
+secs_to_unixtime (UnixSecs) -> {UnixSecs div 1000000, UnixSecs rem 1000000, 0}.
 
--type datetime() :: {date(), time()}.
--type date() :: {integer(), integer(), integer()}. % {Year, Month, Day}
--type time() :: {integer(), integer(), integer()}. % {Hour, Minute, Second}
+-spec unixtime_to_secs (unixtime()) -> unixsecs().
+unixtime_to_secs ({MegaSecs, Secs, _}) -> MegaSecs * 1000000 + Secs.
 
--define(UnixEpochGregorianSecs, calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})).
-
--spec datetime_to_unixtime (datetime()) -> unixtime().
-datetime_to_unixtime (DateTime) ->
-	{unixtime, (calendar:datetime_to_gregorian_seconds(DateTime) - ?UnixEpochGregorianSecs) * 1000}.
-
--spec unixtime_to_datetime (unixtime()) -> datetime().
-unixtime_to_datetime ({unixtime, MilliSecs}) ->
-	calendar:gregorian_seconds_to_datetime(MilliSecs div 1000 + ?UnixEpochGregorianSecs).
-
-%% Javascript %%
+% Javascript %
 
 -type javascript() :: {javascript, document(), utf8()}.  % scope and code
 
-%% ObjectId %%
+% ObjectId %
 
--type objectid() :: {oid, <<_:96>>}.
-% <<Timestamp:32/big, MachineId:24/big, ProcessId:16/big, Count:24/big>>
-% Timestamp is seconds since Unix epoch (Jan 1, 1970)
+-type objectid() :: {<<_:96>>}.
+% <<UnixTimeSecs:32/big, MachineId:24/big, ProcessId:16/big, Count:24/big>>
 
--spec objectid (integer(), <<_:40>>, integer()) -> objectid().
+-spec objectid (unixsecs(), <<_:40>>, integer()) -> objectid().
 objectid (UnixSecs, MachineAndProcId, Count) ->
-	{oid, <<UnixSecs :32/big, MachineAndProcId :5/binary, Count :24/big>>}.
+	{<<UnixSecs :32/big, MachineAndProcId :5/binary, Count :24/big>>}.
 
 -spec objectid_time (objectid()) -> unixtime().
 % Time when object id was generated
-objectid_time ({oid, <<UnixSecs:32/big, _:64>>}) -> {unixtime, UnixSecs * 1000}.
+objectid_time ({<<UnixSecs:32/big, _:64>>}) -> secs_to_unixtime (UnixSecs).
