@@ -43,11 +43,11 @@ doc_foldr (Fun, Acc, Doc) -> doc_foldrN (Fun, Acc, Doc, 0, tuple_size (Doc) div 
 doc_foldrN (_, Acc, _, Low, Low) -> Acc;
 doc_foldrN (Fun, Acc, Doc, Low, High) ->
 	Acc1 = Fun (element (High * 2 - 1, Doc), element (High * 2, Doc), Acc),
-	doc_foldlN (Fun, Acc1, Doc, Low, High - 1).
+	doc_foldrN (Fun, Acc1, Doc, Low, High - 1).
 
 -spec fields (document()) -> [{label(), value()}].
 % Convert document to a list of all its fields
-fields (Doc) -> doc_foldr (fun (Label, Value, List) -> [{Label, Value} | List] end, Doc, []).
+fields (Doc) -> doc_foldr (fun (Label, Value, List) -> [{Label, Value} | List] end, [], Doc).
 
 -spec document ([{label(), value()}]) -> document().
 % Convert list of fields to a document

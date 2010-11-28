@@ -6,7 +6,7 @@
 bson_test() ->
 	Doc = {b, {x, 2, y, 3},
 		   a, 1,
-		   c, [<<"Mon">>, <<"Tue">>, <<"Wed">>]},
+		   c, [mon, tue, wed]},
 	{1} = bson:lookup (a, Doc),
 	{} = bson:lookup (d, Doc),
 	1 = bson:at (a, Doc),
@@ -15,7 +15,8 @@ bson_test() ->
 	{a, 1} = bson:exclude ([b,c], Doc),
 	{b, {x, 2, y, 3}, a, 1, c, 4.2} = bson:update (c, 4.2, Doc),
 	{b, 0, a, 1, c, 2, d, 3} = bson:merge ({c, 2, d, 3, b, 0}, Doc),
-	{a, 1, b, 2, c, 3, d, 4} = bson:append ({a, 1, b, 2}, {c, 3, d, 4}).
+	{a, 1, b, 2, c, 3, d, 4} = bson:append ({a, 1, b, 2}, {c, 3, d, 4}),
+	[{b, {x, 2, y, 3}}, {a, 1}, {c, [mon, tue, wed]}] = bson:fields (Doc).
 
 time_test() ->
 	{MegaSecs, Secs, _} = bson:timenow(),
