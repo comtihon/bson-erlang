@@ -64,7 +64,7 @@ lookup (Label, Doc) -> case find (Label, Doc) of
 	{Index} -> {element (Index * 2 + 2, Doc)};
 	{} -> {} end.
 
--spec find (label(), document) -> maybe (integer()).
+-spec find (label(), document()) -> maybe (integer()).
 % Index of field in document if there
 find (Label, Doc) -> findN (Label, Doc, 0, tuple_size (Doc) div 2).
 
