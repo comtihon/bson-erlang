@@ -1,4 +1,4 @@
-% A BSON document is a JSON-like object with a standard binary encoding defined at bsonspec.org. This implements version 1.0 of that spec.
+%@doc A BSON document is a JSON-like object with a standard binary encoding defined at bsonspec.org. This implements version 1.0 of that spec.
 -module (bson).
 
 -export_type ([maybe/1]).
@@ -26,63 +26,65 @@
 -type label() :: atom().
 
 -spec doc_foldl (fun ((label(), value(), A) -> A), A, document()) -> A.
+%@doc Reduce document by applying given function to each field with result of previous field's application, starting with given initial result.
 doc_foldl (Fun, Acc, Doc) -> doc_foldlN (Fun, Acc, Doc, 0, tuple_size (Doc) div 2).
 
 -spec doc_foldlN (fun ((label(), value(), A) -> A), A, document(), integer(), integer()) -> A.
-% Fold over fields from first index (inclusive) to second index (exclusive), zero-based index.
+%@doc Fold over fields from first index (inclusive) to second index (exclusive), zero-based index.
 doc_foldlN (_, Acc, _, High, High) -> Acc;
 doc_foldlN (Fun, Acc, Doc, Low, High) ->
 	Acc1 = Fun (element (Low * 2 + 1, Doc), element (Low * 2 + 2, Doc), Acc),
 	doc_foldlN (Fun, Acc1, Doc, Low + 1, High).
 
 -spec doc_foldr (fun ((label(), value(), A) -> A), A, document()) -> A.
+%@doc Same as doc_foldl/3 except apply fields in reverse order
 doc_foldr (Fun, Acc, Doc) -> doc_foldrN (Fun, Acc, Doc, 0, tuple_size (Doc) div 2).
 
 -spec doc_foldrN (fun ((label(), value(), A) -> A), A, document(), integer(), integer()) -> A.
-% Fold over fields from second index (exclusive) to first index (inclusive), zero-based index.
+%@doc Fold over fields from second index (exclusive) to first index (inclusive), zero-based index.
 doc_foldrN (_, Acc, _, Low, Low) -> Acc;
 doc_foldrN (Fun, Acc, Doc, Low, High) ->
 	Acc1 = Fun (element (High * 2 - 1, Doc), element (High * 2, Doc), Acc),
 	doc_foldrN (Fun, Acc1, Doc, Low, High - 1).
 
 -spec fields (document()) -> [{label(), value()}].
-% Convert document to a list of all its fields
+%@doc Convert document to a list of all its fields
 fields (Doc) -> doc_foldr (fun (Label, Value, List) -> [{Label, Value} | List] end, [], Doc).
 
 -spec document ([{label(), value()}]) -> document().
-% Convert list of fields to a document
+%@doc Convert list of fields to a document
 document (Fields) -> list_to_tuple (flatten (Fields)).
 
 -spec flatten ([{label(), value()}]) -> [label() | value()].
-% Flatten list by removing tuple constructors
+%@doc Flatten list by removing tuple constructors
 flatten ([]) -> [];
 flatten ([{Label, Value} | Fields]) -> [Label, Value | flatten (Fields)].
 
 -spec lookup (label(), document()) -> maybe (value()).
-% Value of field in document if there
+%@doc Value of field in document if there
 lookup (Label, Doc) -> case find (Label, Doc) of
 	{Index} -> {element (Index * 2 + 2, Doc)};
 	{} -> {} end.
 
 -spec find (label(), document()) -> maybe (integer()).
-% Index of field in document if there
+%@doc Index of field in document if there
 find (Label, Doc) -> findN (Label, Doc, 0, tuple_size (Doc) div 2).
 
 -spec findN (label(), document(), integer(), integer()) -> maybe (integer()).
-% Find field index in document from first index (inclusive) to second index (exclusive).
+%@doc Find field index in document from first index (inclusive) to second index (exclusive).
 findN (_Label, _Doc, High, High) -> {};
 findN (Label, Doc, Low, High) -> case element (Low * 2 + 1, Doc) of
 	Label -> {Low};
 	_ -> findN (Label, Doc, Low + 1, High) end.
 
 -spec at (label(), document()) -> value().
-% Value of field in document, error if missing
+%@doc Value of field in document, error if missing
 at (Label, Document) -> case lookup (Label, Document) of
 	{} -> erlang:error (missing_field, [Label, Document]);
 	{Value} -> Value end.
 
 -spec include ([label()], document()) -> document().
-% Project given fields of document
+%@doc Project given fields of document
 include (Labels, Document) ->
 	Fun = fun (Label, Doc) -> case lookup (Label, Document) of
 		{Value} -> [Label, Value | Doc];
@@ -90,7 +92,7 @@ include (Labels, Document) ->
 	list_to_tuple (lists:foldr (Fun, [], Labels)).
 
 -spec exclude ([label()], document()) -> document().
-% Remove given fields from document
+%@doc Remove given fields from document
 exclude (Labels, Document) ->
 	Fun = fun (Label, Value, Doc) -> case lists:member (Label, Labels) of
 		false -> [Label, Value | Doc];
@@ -98,7 +100,7 @@ exclude (Labels, Document) ->
 	list_to_tuple (doc_foldr (Fun, [], Document)).
 
 -spec update (label(), value(), document()) -> document().
-% Replace field with new value, adding to end if new
+%@doc Replace field with new value, adding to end if new
 update (Label, Value, Document) -> case find (Label, Document) of
 	{Index} -> setelement (Index * 2 + 2, Document, Value);
 	{} ->
@@ -106,13 +108,13 @@ update (Label, Value, Document) -> case find (Label, Document) of
 		erlang:append_element (Doc, Value) end.
 
 -spec merge (document(), document()) -> document().
-% First doc overrides second with new fields added at end of second doc
+%@doc First doc overrides second with new fields added at end of second doc
 merge (UpDoc, BaseDoc) ->
 	Fun = fun (Label, Value, Doc) -> update (Label, Value, Doc) end,
 	doc_foldl (Fun, BaseDoc, UpDoc).
 
 -spec append (document(), document()) -> document().
-% Append two documents together
+%@doc Append two documents together
 append (Doc1, Doc2) -> list_to_tuple (tuple_to_list (Doc1) ++ tuple_to_list (Doc2)).
 
 % Value %
@@ -149,17 +151,17 @@ append (Doc1, Doc2) -> list_to_tuple (tuple_to_list (Doc1) ++ tuple_to_list (Doc
 
 -type utf8() :: unicode:unicode_binary().
 % binary() representing a string of characters encoded with UTF-8.
-% An Erlang string() is a list of unicode characters (codepoints), but this list must be converted to utf-8 binary for use in Bson. Call utf8/1 to do this, or encode pure ascii literals directly as <<"abc">> and non-pure ascii literals as <<"aßc"/utf8>>.
+% An Erlang string() is a list of unicode characters (codepoints), but this list must be converted to utf-8 binary for use in Bson. Call utf8/1 to do this, or encode pure ascii literals directly as `<<"abc">>' and non-pure ascii literals as `<<"aßc"/utf8>>'.
 
 -spec utf8 (unicode:chardata()) -> utf8().
-% Convert string to utf8 binary. string() is a subtype of unicode:chardata().
+%@doc Convert string to utf8 binary. string() is a subtype of unicode:chardata().
 utf8 (CharData) -> case unicode:characters_to_binary (CharData) of
 	{error, _Bin, _Rest} -> erlang:error (unicode_error, [CharData]);
 	{incomplete, _Bin, _Rest} -> erlang:error (unicode_incomplete, [CharData]);
 	Bin -> Bin end.
 
 -spec str (unicode:chardata()) -> string().
-% Convert utf8 binary to string. utf8() is a subtype of unicode:chardata().
+%@doc Convert utf8 binary to string. utf8() is a subtype of unicode:chardata().
 str (CharData) -> case unicode:characters_to_list (CharData) of
 	{error, _Bin, _Rest} -> erlang:error (unicode_error, [CharData]);
 	{incomplete, _Bin, _Rest} -> erlang:error (unicode_incomplete, [CharData]);
@@ -194,7 +196,7 @@ str (CharData) -> case unicode:characters_to_list (CharData) of
 timenow() -> ms_precision (os:timestamp()).
 
 -spec ms_precision (unixtime()) -> unixtime().
-% Truncate microsecs to millisecs since bson drops microsecs anyway, so time will be equal before and after serialization.
+%@doc Truncate microsecs to millisecs since bson drops microsecs anyway, so time will be equal before and after serialization.
 ms_precision ({MegaSecs, Secs, MicroSecs}) ->
 	{MegaSecs, Secs, MicroSecs div 1000 * 1000}.
 
@@ -213,12 +215,12 @@ unixtime_to_secs ({MegaSecs, Secs, _}) -> MegaSecs * 1000000 + Secs.
 % ObjectId %
 
 -type objectid() :: {<<_:96>>}.
-% <<UnixTimeSecs:32/big, MachineId:24/big, ProcessId:16/big, Count:24/big>>
+% `<<UnixTimeSecs:32/big, MachineId:24/big, ProcessId:16/big, Count:24/big>>'
 
 -spec objectid (unixsecs(), <<_:40>>, integer()) -> objectid().
 objectid (UnixSecs, MachineAndProcId, Count) ->
 	{<<UnixSecs :32/big, MachineAndProcId :5/binary, Count :24/big>>}.
 
 -spec objectid_time (objectid()) -> unixtime().
-% Time when object id was generated
+%@doc Time when object id was generated
 objectid_time ({<<UnixSecs:32/big, _:64>>}) -> secs_to_unixtime (UnixSecs).

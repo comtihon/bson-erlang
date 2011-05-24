@@ -15,6 +15,8 @@ is a document with three fields: `{x,<<"abc">>}` and `{y,[1,2,3]}`, and `{z,{a,'
 	> {x,<<"abc">>, y,[1,2,3], z,null, w,1} = bson:merge ({w,1, z,null}, Doc).
 	> {w,1, x,<<"abc">>, y,[1,2,3], z,{a,'Foo', b,4.2}} = bson:append ({w,1}, Doc).
 
-For the full list of `bson:value()` types see the [bson module](http://github.com/TonyGen/bson-erlang/blob/master/src/bson.erl). Notice that an Erlang `string()` will be interpreted as a list of integers, so remember to alway delimit your literal strings with binary brackets (eg. `<<"abc">>`) and convert string variables using `bson:utf8`. You may be tempted to use atoms instead of strings, but you should only use atoms for enumerated types.
+For the full list of `bson:value()` types see the [bson](http://github.com/TonyGen/bson-erlang/blob/master/src/bson.erl) module. Notice that an Erlang `string()` will be interpreted as a list of integers, so remember to alway delimit string literals with binary brackets (eg. `<<"abc">>`) and convert string variables using `bson:utf8`. You may be tempted to use atoms instead of strings, but you should only use atoms for enumerated types.
 
 There are some special `bson:value()` types like `bson:javascript()` that are tagged tuples, eg. `{javascript, {x,1}, <<"function (y) {return y + x}">>}`. But embedded documents are also tuples, so how do we distinguish between the two? The answer is the `bson:value()` types that are tagged tuples are purposely defined to have an odd number of elements to distinguish them from documents which have an even number of elements.
+
+[API Docs](http://api.mongodb.org/erlang/bson/) - Documentation generated from source code comments

@@ -1,4 +1,4 @@
-% Standard binary encoding of Bson documents, version 1.0. See bsonspec.org.
+%@doc Standard binary encoding of Bson documents, version 1.0. See bsonspec.org.
 -module (bson_binary).
 
 -export ([put_document/1, get_document/1, put_cstring/1, get_cstring/1]).
@@ -76,7 +76,7 @@ get_string (<<?get_int32 (N), Bin /binary>>) ->
 	{UBin, Rest}.
 
 -spec put_cstring (bson:utf8()) -> binary().
-% utf8 binary cannot contain a 0 byte.
+%@doc utf8 binary cannot contain a 0 byte.
 put_cstring (UBin) -> <<UBin /binary, 0:8>>.
 
 -spec get_cstring (binary()) -> {bson:utf8(), binary()}.
@@ -101,7 +101,7 @@ get_fields (Bin) ->
 	[binary_to_atom (Name, utf8), Value | get_fields (Bin1)].
 
 -spec put_array (bson:arr()) -> binary().
-% encode same as document with labels '0', '1', etc.
+% encoded same as document with labels '0', '1', etc.
 put_array (Values) ->
 	{_N, Bin} = lists:foldl (fun put_value_accum/2, {0, <<>>}, Values),
 	<<?put_int32 (byte_size (Bin) + 5), Bin/binary, 0:8>>.

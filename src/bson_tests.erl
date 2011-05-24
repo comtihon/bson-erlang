@@ -1,7 +1,8 @@
 -module(bson_tests).
 
+-export ([bson_test/0, time_test/0, objectid_test/0, binary_test/0]).
+
 -include_lib("eunit/include/eunit.hrl").
--compile(export_all).
 
 bson_test() ->
 	Doc = {b, {x, 2, y, 3},
