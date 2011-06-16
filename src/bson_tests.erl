@@ -10,6 +10,8 @@ bson_test() ->
 		   c, [mon, tue, wed]},
 	{1} = bson:lookup (a, Doc),
 	{} = bson:lookup (d, Doc),
+	2 = bson:lookup (d, Doc, 2),
+	1 = bson:lookup (a, Doc, 3),
 	1 = bson:at (a, Doc),
 	{'EXIT', {missing_field, _}} = (catch bson:at (d, Doc)),
 	{a, 1} = bson:include ([a], Doc),

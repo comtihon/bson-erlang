@@ -9,7 +9,7 @@
 -export_type ([javascript/0]).
 -export_type ([objectid/0, unixsecs/0]).
 
--export ([lookup/2, at/2, include/2, exclude/2, update/3, merge/2, append/2]).
+-export ([lookup/2, lookup/3, at/2, include/2, exclude/2, update/3, merge/2, append/2]).
 -export ([doc_foldl/3, doc_foldr/3, fields/1, document/1]).
 -export ([utf8/1, str/1]).
 -export ([timenow/0, ms_precision/1, secs_to_unixtime/1, unixtime_to_secs/1]).
@@ -65,6 +65,12 @@ flatten ([{Label, Value} | Fields]) -> [Label, Value | flatten (Fields)].
 lookup (Label, Doc) -> case find (Label, Doc) of
 	{Index} -> {element (Index * 2 + 2, Doc)};
 	{} -> {} end.
+
+-spec lookup (label(), document(), value()) -> value().
+%@doc Value of field in document if there or default
+lookup (Label, Doc, Default) -> case find (Label, Doc) of
+	{Index} -> element (Index * 2 + 2, Doc);
+	{} -> Default end.
 
 -spec find (label(), document()) -> maybe (integer()).
 %@doc Index of field in document if there
