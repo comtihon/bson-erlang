@@ -80,7 +80,10 @@ get_string (<<?get_int32 (N), Bin /binary>>) ->
 put_cstring (UBin) -> <<UBin /binary, 0:8>>.
 
 -spec get_cstring (binary()) -> {bson:utf8(), binary()}.
-get_cstring (Bin) -> list_to_tuple (binary:split (Bin, <<0>>)).
+get_cstring (Bin) -> % list_to_tuple (binary:split (Bin, <<0>>)).
+	{Pos, _Len} = binary:match (Bin, <<0>>), % _Len = 1 but don't match 1 to avoid check
+	<<UBin :Pos /binary, 0:8, Rest /binary>> = Bin,
+	{UBin, Rest}.
 
 -spec put_document (bson:document()) -> binary().
 put_document (Document) ->
