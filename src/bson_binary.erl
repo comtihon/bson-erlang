@@ -16,6 +16,7 @@ put_field (Name, Value) -> case Value of
 	false -> <<?put_tagname (8), 0:8>>;
 	true -> <<?put_tagname (8), 1:8>>;
 	null -> <<?put_tagname (10)>>;
+	undefined -> <<?put_tagname (10)>>;
 	'MIN_KEY' -> <<?put_tagname (255)>>;
 	'MAX_KEY' -> <<?put_tagname (127)>>;
 	{Oid} -> <<?put_tagname (7), (put_oid (Oid)) /binary>>;
@@ -50,7 +51,7 @@ get_field (<<Tag:8, Bin0/binary>>) ->
 		7 -> {Oid, Bin2} = get_oid (Bin1), {{Oid}, Bin2};
 		8 -> <<Bit:8, Bin2 /binary>> = Bin1, {case Bit of 0 -> false; 1 -> true end, Bin2};
 		9 -> get_unixtime (Bin1);
-		10 -> {null, Bin1};
+		10 -> {undefined, Bin1};
 		11 ->
 			{Pat, Bin2} = get_cstring (Bin1),
 			{Opt, Bin3} = get_cstring (Bin2),
