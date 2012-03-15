@@ -32,7 +32,7 @@ put_field (Name, Value) -> case Value of
 		is_binary (V) -> <<?put_tagname (2), (put_string (V)) /binary>>;
 		is_tuple (V) -> <<?put_tagname (3), (put_document (V)) /binary>>;
 		is_list (V) -> <<?put_tagname (4), (put_array (V)) /binary>>;
-		is_atom (V) -> <<?put_tagname (14), (put_string (atom_to_binary (V, utf8))) /binary>>;
+		is_atom (V) -> <<?put_tagname (14), (put_string (to_binary (V))) /binary>>;
 		is_integer (V) -> if
 			?fits_int32 (V) -> <<?put_tagname (16), ?put_int32 (V)>>;
 			?fits_int64 (V) -> <<?put_tagname (18), ?put_int64 (V)>>;
@@ -91,7 +91,7 @@ put_document (Document) ->
 	Bin = bson:doc_foldl (fun put_field_accum/3, <<>>, Document),
 	<<?put_int32 (byte_size (Bin) + 5), Bin /binary, 0:8>>.
 put_field_accum (Label, Value, Bin) ->
-	<<Bin /binary, (put_field (atom_to_binary (Label, utf8), Value)) /binary>>.
+	<<Bin /binary, (put_field (to_binary (Label), Value)) /binary>>.
 
 -spec get_document (binary()) -> {bson:document(), binary()}.
 get_document (<<?get_int32 (N), Bin /binary>>) ->
@@ -162,3 +162,9 @@ put_oid (<<Oid :12/binary>>) -> Oid.
 
 -spec get_oid (binary()) -> {<<_:96>>, binary()}.
 get_oid (<<Oid :12/binary, Bin/binary>>) -> {Oid, Bin}.
+
+-spec to_binary(term()) -> binary().
+to_binary(Bin) when is_binary(Bin) -> Bin;
+to_binary(List) when is_list(List) -> list_to_binary(List);
+to_binary(Atom) when is_atom(Atom) -> atom_to_binary(Atom, utf8);
+to_binary(Int) when is_integer(Int) -> to_binary(integer_to_list(Int)).
