@@ -48,7 +48,7 @@ binary_test() ->
 			k1, false,
 			k2, true,
 			l, Time,
-			m, null,
+			m, undefined,
 			n, {regex, <<"foo">>, <<"bar">>},
 			o1, {javascript, {}, <<"function(x) = x + 1;">>},
 			o2, {javascript, {x, 0, y, <<"foo">>}, <<"function(a) = a + x">>},
