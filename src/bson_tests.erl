@@ -11,7 +11,7 @@ bson_test() ->
 	2 = bson:lookup (d, Doc, 2),
 	1 = bson:lookup (a, Doc, 3),
 	1 = bson:at (a, Doc),
-	{'EXIT', {missing_field, _}} = (catch bson:at (d, Doc)),
+	null = bson:at (d, Doc),
 	{a, 1} = bson:include ([a], Doc),
 	{a, 1} = bson:exclude ([b,c], Doc),
 	{b, {x, 2, y, 3}, a, 1, c, 4.2} = bson:update (c, 4.2, Doc),

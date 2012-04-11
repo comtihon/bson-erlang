@@ -87,7 +87,8 @@ findN (Label, Doc, Low, High) -> case element (Low * 2 + 1, Doc) of
 -spec at (label(), document()) -> value().
 %@doc Value of field in document, error if missing
 at (Label, Document) -> case lookup (Label, Document) of
-	{} -> erlang:error (missing_field, [Label, Document]);
+	% {} -> erlang:error (missing_field, [Label, Document]);
+	{} -> null;
 	{Value} -> Value end.
 
 -spec include ([label()], document()) -> document().
