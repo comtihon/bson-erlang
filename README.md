@@ -1,6 +1,8 @@
-This is the Bson implementation for Erlang. Bson is a record-like data type with a standard binary representation defined at <http://www.bsonspec.org>. This implements version 1.0 of that spec. The standard binary form allows for easy data interchange between systems. In particular, [MongoDB](http://www.mongodb.org) uses it for exchanging data between the MongoDB server and its clients.
+This is the BSON implementation for Erlang.
 
-The root Bson data type is `bson:document()`. Conceptually, it is a list of name-value pairs, analogous to an associative array, dictionary, or record. However, in this implementation, for writability and readability, the list of pairs is flattened, (ie. the tuples for each pair are elided), and the list is actually a tuple to distinguish it from list (array) of values. So a document is a tuple with alternating name and value elements, where a name is an `atom()` and a value is a `bson:value()`, which includes basic types like `boolean()`, `number()`, `atom()`, `bson:utf8()` (string), and compound types like `[bson:value()]` and `bson:document()`. For example,
+BSON is a record-like data type with a standard binary representation defined at <http://www.bsonspec.org>. This implements version 1.0 of that spec. The standard binary form allows for easy data interchange between systems. In particular, [MongoDB](http://www.mongodb.org) uses it for exchanging data between the MongoDB server and its clients.
+
+The root BSON data type is `bson:document()`, a list of name-value pairs, analogous to an associative array, dictionary, or record. In this implementation, for writability and readability, the list of pairs is flattened (i.e. the tuples for each pair are elided), and the list is actually a tuple to distinguish it from list (array) of values. Hence a document is a tuple with alternating name and value elements, where a name is an `atom()` and a value is a `bson:value()`, which includes basic types like `boolean()`, `number()`, `atom()`, `bson:utf8()` (string), and compound types like `[bson:value()]` and `bson:document()`. For example,
 
 	> Doc = {x,<<"abc">>, y,[1,2,3], z,{a,'Foo', b,4.2}}.
 
@@ -17,6 +19,6 @@ is a document with three fields: `{x,<<"abc">>}` and `{y,[1,2,3]}`, and `{z,{a,'
 
 For the full list of `bson:value()` types see the [bson](http://github.com/mongodb/bson-erlang/blob/master/src/bson.erl) module. Notice that an Erlang `string()` will be interpreted as a list of integers, so remember to alway delimit string literals with binary brackets (eg. `<<"abc">>`) and convert string variables using `bson:utf8`. You may be tempted to use atoms instead of strings, but you should only use atoms for enumerated types.
 
-There are some special `bson:value()` types like `bson:javascript()` that are tagged tuples, eg. `{javascript, {x,1}, <<"function (y) {return y + x}">>}`. But embedded documents are also tuples, so how do we distinguish between the two? The answer is the `bson:value()` types that are tagged tuples are purposely defined to have an odd number of elements to distinguish them from documents which have an even number of elements.
+There are some special `bson:value()` types like `bson:javascript()` that are tagged tuples, eg. `{javascript, {x,1}, <<"function (y) {return y + x}">>}`. But embedded documents are also tuples, so how do we distinguish between the two? Tagged tuple `bson:value()` values intentionally have an odd number of elements, to distinguish them from documents, which always have an even number of elements, as they store key-value pairs.
 
-[API Docs](http://api.mongodb.org/erlang/bson/) - Documentation generated from source code comments
+[API Docs](http://api.mongodb.org/erlang/bson/) - Documentation generated from source code comments.

@@ -90,8 +90,10 @@ get_cstring (Bin) -> % list_to_tuple (binary:split (Bin, <<0>>)).
 put_document (Document) ->
 	Bin = bson:doc_foldl (fun put_field_accum/3, <<>>, Document),
 	<<?put_int32 (byte_size (Bin) + 5), Bin /binary, 0:8>>.
-put_field_accum (Label, Value, Bin) ->
-	<<Bin /binary, (put_field (atom_to_binary (Label, utf8), Value)) /binary>>.
+put_field_accum (Label, Value, Bin) when is_atom(Label) ->
+	<<Bin /binary, (put_field (atom_to_binary (Label, utf8), Value)) /binary>>;
+put_field_accum (Label, Value, Bin) when is_binary(Label) ->
+	<<Bin /binary, (put_field (Label, Value)) /binary>>.
 
 -spec get_document (binary()) -> {bson:document(), binary()}.
 get_document (<<?get_int32 (N), Bin /binary>>) ->
