@@ -63,9 +63,20 @@ flatten ([{Label, Value} | Fields]) -> [Label, Value | flatten (Fields)].
 
 -spec lookup (label(), document()) -> maybe (value()).
 %@doc Value of field in document if there
-lookup (Label, Doc) -> case find (Label, Doc) of
-	{Index} -> {element (Index * 2 + 2, Doc)};
-	{} -> {} end.
+lookup (Label, Doc) ->
+	Parts = string:tokens (atom_to_list(Label), "."),
+	lists:foldl (fun(Part, {Acc, Pos}) ->
+			case find (list_to_atom(Part), Acc) of
+				{Index} -> case Pos+1 == length(Parts) of
+						true -> {element (Index * 2 + 2, Acc)};
+						false -> {element (Index * 2 + 2, Acc), Pos+1}
+					end;
+				{} -> case Pos+1 == length(Parts) of
+						true -> {};
+						false -> {{}, Pos+1}
+					end
+			end
+		end, {Doc, 0}, Parts).
 
 -spec lookup (label(), document(), value()) -> value().
 %@doc Value of field in document if there or default
