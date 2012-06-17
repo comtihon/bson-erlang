@@ -16,6 +16,7 @@ bson_test() ->
 	{} = bson:lookup ('b.b', Doc),
 	null = bson:at (d, Doc),
 	{a, 1} = bson:include ([a], Doc),
+	{a, 1, 'b.x', 2} = bson:include ([a, 'b.x'], Doc),
 	{a, 1} = bson:exclude ([b,c], Doc),
 	{b, {x, 2, y, 3}, a, 1, c, 4.2} = bson:update (c, 4.2, Doc),
 	{b, {x, 13, y, 3}, a, 1, c, [mon, tue, wed]} = bson:update ('b.x', 13, Doc),
