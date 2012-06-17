@@ -63,15 +63,33 @@ flatten ([{Label, Value} | Fields]) -> [Label, Value | flatten (Fields)].
 
 -spec lookup (label(), document()) -> maybe (value()).
 %@doc Value of field in document if there
-lookup (Label, Doc) -> case find (Label, Doc) of
-	{Index} -> {element (Index * 2 + 2, Doc)};
-	{} -> {} end.
+lookup (Label, Doc) ->
+	Parts = string:tokens (atom_to_list (Label), "."),
+	case length (Parts) of
+		1 ->
+			case find (list_to_atom (hd (Parts)), Doc) of
+						{Index} -> {element (Index * 2 + 2, Doc)};
+						{} -> {} end;
+		_ ->
+			case find (list_to_atom (hd (Parts)), Doc) of
+				{Index} -> lookup (list_to_atom (string:join (tl (Parts), ".")), element (Index * 2 + 2, Doc));
+				{} -> {} end
+	end.
 
 -spec lookup (label(), document(), value()) -> value().
 %@doc Value of field in document if there or default
-lookup (Label, Doc, Default) -> case find (Label, Doc) of
-	{Index} -> element (Index * 2 + 2, Doc);
-	{} -> Default end.
+lookup (Label, Doc, Default) ->
+    Parts = string:tokens (atom_to_list (Label), "."),
+	case length (Parts) of
+		1 ->
+			case find (list_to_atom (hd (Parts)), Doc) of
+						{Index} -> element (Index * 2 + 2, Doc);
+						{} -> Default end;
+		_ ->
+			case find (list_to_atom (hd (Parts)), Doc) of
+				{Index} -> lookup (list_to_atom (string:join (tl (Parts), ".")), element (Index * 2 + 2, Doc));
+				{} -> Default end
+	end.
 
 -spec find (label(), document()) -> maybe (integer()).
 %@doc Index of field in document if there
@@ -109,11 +127,22 @@ exclude (Labels, Document) ->
 
 -spec update (label(), value(), document()) -> document().
 %@doc Replace field with new value, adding to end if new
-update (Label, Value, Document) -> case find (Label, Document) of
-	{Index} -> setelement (Index * 2 + 2, Document, Value);
-	{} ->
-		Doc = erlang:append_element (Document, Label),
-		erlang:append_element (Doc, Value) end.
+update (Label, Value, Document) ->
+	Parts = string:tokens (atom_to_list (Label), "."),
+	case length (Parts) of
+		1 ->
+			case find (list_to_atom (hd (Parts)), Document) of
+				{Index} -> setelement (Index * 2 + 2, Document, Value);
+				{} ->
+					Doc = erlang:append_element (Document, Label),
+					erlang:append_element (Doc, Value) end;
+		_ ->
+			case find (list_to_atom (hd (Parts)), Document) of
+				{Index} -> setelement (Index * 2 + 2, Document, update (list_to_atom (string:join (tl (Parts), ".")), Value, element (Index * 2 + 2, Document)));
+				{} -> Doc = erlang:append_element (Document, list_to_atom (hd (Parts))),
+						erlang:append_element (Doc, update (list_to_atom (string:join (tl (Parts), ".")), Value, {})) end
+	end.
+
 
 -spec merge (document(), document()) -> document().
 %@doc First doc overrides second with new fields added at end of second doc
