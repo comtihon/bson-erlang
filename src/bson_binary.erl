@@ -48,6 +48,7 @@ get_field (<<Tag:8, Bin0/binary>>) ->
 		3 -> get_document (Bin1);
 		4 -> get_array (Bin1);
 		5 -> {BinType, Bin, Bin2} = get_binary (Bin1), {{bin, BinType, Bin}, Bin2};
+		6 -> {undefined, Bin1}; % Treat the deprecated "undefined" value as null, which we call 'undefined'!
 		7 -> {Oid, Bin2} = get_oid (Bin1), {{Oid}, Bin2};
 		8 -> <<Bit:8, Bin2 /binary>> = Bin1, {case Bit of 0 -> false; 1 -> true end, Bin2};
 		9 -> get_unixtime (Bin1);
