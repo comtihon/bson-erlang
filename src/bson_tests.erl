@@ -16,6 +16,10 @@ bson_test() ->
 	{a, 1} = bson:exclude ([b,c], Doc),
 	{b, {x, 2, y, 3}, a, 1, c, 4.2} = bson:update (c, 4.2, Doc),
 	{b, 0, a, 1, c, 2, d, 3} = bson:merge ({c, 2, d, 3, b, 0}, Doc),
+	{a, 1, b, {x, 2, y, 3}, c, 2, d, 3} = bson:merge ({c, 2, d, 3, b, 0}, Doc, fun
+		(b, _Value1, Value2) -> Value2;
+		(c, Value1, _Value2) -> Value1
+	end),
 	{a, 1, b, 2, c, 3, d, 4} = bson:append ({a, 1, b, 2}, {c, 3, d, 4}),
 	[{b, {x, 2, y, 3}}, {a, 1}, {c, [mon, tue, wed]}] = bson:fields (Doc).
 

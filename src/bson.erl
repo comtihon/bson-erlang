@@ -10,7 +10,7 @@
 -export_type ([javascript/0]).
 -export_type ([objectid/0, unixsecs/0]).
 
--export ([lookup/2, lookup/3, at/2, include/2, exclude/2, update/3, merge/2, append/2]).
+-export ([lookup/2, lookup/3, at/2, include/2, exclude/2, update/3, merge/2, merge/3, append/2]).
 -export ([doc_foldl/3, doc_foldr/3, fields/1, document/1]).
 -export ([utf8/1, str/1]).
 -export ([timenow/0, ms_precision/1, secs_to_unixtime/1, unixtime_to_secs/1]).
@@ -119,6 +119,13 @@ update (Label, Value, Document) -> case find (Label, Document) of
 merge (UpDoc, BaseDoc) ->
 	Fun = fun (Label, Value, Doc) -> update (Label, Value, Doc) end,
 	doc_foldl (Fun, BaseDoc, UpDoc).
+
+-spec merge (document(), document(), fun((label(), value(), value()) -> value())) -> document().
+merge(UpDoc, BaseDoc, Fun) ->
+	Dict1 = orddict:from_list(bson:fields(UpDoc)),
+	Dict2 = orddict:from_list(bson:fields(BaseDoc)),
+	bson:document(orddict:merge(Fun, Dict1, Dict2)).
+
 
 -spec append (document(), document()) -> document().
 %@doc Append two documents together
