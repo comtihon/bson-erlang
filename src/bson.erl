@@ -238,3 +238,40 @@ objectid (UnixSecs, MachineAndProcId, Count) ->
 -spec objectid_time (objectid()) -> unixtime().
 %@doc Time when object id was generated
 objectid_time ({<<UnixSecs:32/big, _:64>>}) -> secs_to_unixtime (UnixSecs).
+
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+bson_test() ->
+	Doc = {b, {x, 2, y, 3},
+		   a, 1,
+		   c, [mon, tue, wed]},
+	{1} = bson:lookup (a, Doc),
+	{} = bson:lookup (d, Doc),
+	2 = bson:lookup (d, Doc, 2),
+	1 = bson:lookup (a, Doc, 3),
+	1 = bson:at (a, Doc),
+	{'EXIT', {missing_field, _}} = (catch bson:at (d, Doc)),
+	{a, 1} = bson:include ([a], Doc),
+	{a, 1} = bson:exclude ([b,c], Doc),
+	{b, {x, 2, y, 3}, a, 1, c, 4.2} = bson:update (c, 4.2, Doc),
+	{b, 0, a, 1, c, 2, d, 3} = bson:merge ({c, 2, d, 3, b, 0}, Doc),
+	{a, 1, b, {x, 2, y, 3}, c, 2, d, 3} = bson:merge ({c, 2, d, 3, b, 0}, Doc, fun
+		(b, _Value1, Value2) -> Value2;
+		(c, Value1, _Value2) -> Value1
+	end),
+	{a, 1, b, 2, c, 3, d, 4} = bson:append ({a, 1, b, 2}, {c, 3, d, 4}),
+	[{b, {x, 2, y, 3}}, {a, 1}, {c, [mon, tue, wed]}] = bson:fields (Doc).
+
+time_test() ->
+	{MegaSecs, Secs, _} = bson:timenow(),
+	{MegaSecs, Secs, 0} = bson:secs_to_unixtime (bson:unixtime_to_secs ({MegaSecs, Secs, 0})).
+
+objectid_test() ->
+	{<<1:32/big, 2:24/big, 3:16/big, 4:24/big>>} = bson:objectid (1, <<2:24/big, 3:16/big>>, 4),
+	UnixSecs = bson:unixtime_to_secs (bson:timenow()),
+	UnixTime = bson:objectid_time (bson:objectid (UnixSecs, <<2:24/big, 3:16/big>>, 4)),
+	UnixSecs = bson:unixtime_to_secs (UnixTime).
+
+-endif.

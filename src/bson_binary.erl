@@ -165,3 +165,41 @@ put_oid (<<Oid :12/binary>>) -> Oid.
 
 -spec get_oid (binary()) -> {<<_:96>>, binary()}.
 get_oid (<<Oid :12/binary, Bin/binary>>) -> {Oid, Bin}.
+
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+binary_test() ->
+	Doc = {'BSON', [<<"awesome">>, 5.05, 1986]},
+	Bin = bson_binary:put_document (Doc),
+	Bin = <<49,0,0,0,4,66,83,79,78,0,38,0,0,0,2,48,0,8,0,0,0,97,119,101,115,111,109,101,0,1,49,0,51,51,51,51,51,51,20,64,16,50,0,194,7,0,0,0,0>>,
+	VBin = <<200,12,240,129,100,90,56,198,34,0,0>>,
+	Time = bson:timenow(),
+	Doc1 = {a, -4.230845,
+			b, <<"hello">>,
+			c, {x, -1, y, 2.2001},
+			d, [23, 45, 200],
+			eeeeeeeee, {bin, bin, VBin},
+			f, {bin, function, VBin},
+			g, {bin, uuid, Bin},
+			h, {bin, md5, VBin},
+			i, {bin, userdefined, Bin},
+			j, bson:objectid (bson:unixtime_to_secs (Time), <<2:24/big, 3:16/big>>, 4),
+			k1, false,
+			k2, true,
+			l, Time,
+			m, undefined,
+			n, {regex, <<"foo">>, <<"bar">>},
+			o1, {javascript, {}, <<"function(x) = x + 1;">>},
+			o2, {javascript, {x, 0, y, <<"foo">>}, <<"function(a) = a + x">>},
+			p, atom,
+			q1, -2000444000,
+			q2, -8000111000222001,
+			r, {mongostamp, 100022, 995332003},
+			s1, 'MIN_KEY',
+			s2, 'MAX_KEY'},
+	Bin1 = bson_binary:put_document (Doc1),
+	{Doc1, <<>>} = bson_binary:get_document (Bin1).
+
+-endif.
