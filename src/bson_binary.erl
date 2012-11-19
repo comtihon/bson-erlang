@@ -32,7 +32,7 @@ put_field (Name, Value) -> case Value of
 		is_binary (V) -> <<?put_tagname (2), (put_string (V)) /binary>>;
 		is_tuple (V) -> <<?put_tagname (3), (put_document (V)) /binary>>;
 		is_list (V) -> <<?put_tagname (4), (put_array (V)) /binary>>;
-		is_atom (V) -> <<?put_tagname (14), (put_string (atom_to_binary (V, utf8))) /binary>>;
+		is_atom (V) -> <<?put_tagname (2), (put_string (atom_to_binary (V, utf8))) /binary>>;
 		is_integer (V) -> if
 			?fits_int32 (V) -> <<?put_tagname (16), ?put_int32 (V)>>;
 			?fits_int64 (V) -> <<?put_tagname (18), ?put_int64 (V)>>;
