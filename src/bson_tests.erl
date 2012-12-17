@@ -60,7 +60,7 @@ binary_test() ->
 			n, {regex, <<"foo">>, <<"bar">>},
 			o1, {javascript, {}, <<"function(x) = x + 1;">>},
 			o2, {javascript, {x, 0, y, <<"foo">>}, <<"function(a) = a + x">>},
-			p, atom,
+			p, atom_to_binary(atom, utf8),
 			q1, -2000444000,
 			q2, -8000111000222001,
 			r, {mongostamp, 100022, 995332003},
