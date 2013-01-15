@@ -11,7 +11,7 @@
 -export_type ([objectid/0, unixsecs/0]).
 
 -export ([lookup/2, lookup/3, at/2, include/2, exclude/2, update/3, merge/2, append/2]).
--export ([doc_foldl/3, doc_foldr/3, fields/1, document/1]).
+-export ([doc_foldl/3, doc_foldr/3, fields/1, fields_rec/1, document/1, document_rec/1]).
 -export ([utf8/1, str/1]).
 -export ([timenow/0, ms_precision/1, secs_to_unixtime/1, unixtime_to_secs/1]).
 -export ([objectid/3, objectid_time/1]).
@@ -51,6 +51,24 @@ doc_foldrN (Fun, Acc, Doc, Low, High) ->
 -spec fields (document()) -> [{label(), value()}].
 %@doc Convert document to a list of all its fields
 fields (Doc) -> doc_foldr (fun (Label, Value, List) -> [{Label, Value} | List] end, [], Doc).
+
+fields_rec(Doc) -> 
+	if is_tuple(Doc) -> 
+			doc_foldr (fun (Label, Value, List) -> [{Label, fields_rec(Value)} | List] end, [], Doc);
+		true ->
+			Doc	
+	end.
+
+document_rec(Fields) -> list_to_tuple_smart(flatten_rec(Fields)).
+
+flatten_rec ([{Label, Value} | Fields]) -> 
+	[Label, list_to_tuple_smart(flatten_rec(Value)) | flatten_rec(Fields)];
+flatten_rec (A) -> A.
+
+list_to_tuple_smart(List) ->
+	if is_list(List) -> list_to_tuple(List);
+		true -> List
+	end.
 
 -spec document ([{label(), value()}]) -> document().
 %@doc Convert list of fields to a document
