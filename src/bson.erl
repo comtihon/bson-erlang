@@ -56,7 +56,13 @@ fields_rec(Doc) ->
 	if is_tuple(Doc) -> 
 			doc_foldr (fun (Label, Value, List) -> [{Label, fields_rec(Value)} | List] end, [], Doc);
 		true ->
-			Doc	
+			if is_list(Doc) ->
+					case Doc of
+						[] -> Doc;
+						[A] -> [fields_rec(A)]
+					end;
+				true -> Doc
+			end
 	end.
 
 document_rec(Fields) -> list_to_tuple_smart(flatten_rec(Fields)).
