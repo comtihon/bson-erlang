@@ -264,7 +264,7 @@ str (CharData) -> case unicode:characters_to_list (CharData) of
 % Current unixtime to millisecond precision, ie. MicroSecs is always a multiple of 1000.
 timenow() -> ms_precision (os:timestamp()).
 
--spec timenow () -> unixtime().
+-spec timenow_china () -> unixtime().
 timenow_china() -> ms_precision_china(os:timestamp()).
 
 -spec ms_precision (unixtime()) -> unixtime().
