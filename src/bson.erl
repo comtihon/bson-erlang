@@ -53,8 +53,16 @@ doc_foldrN (Fun, Acc, Doc, Low, High) ->
 fields (Doc) -> doc_foldr (fun (Label, Value, List) -> [{Label, Value} | List] end, [], Doc).
 
 fields_rec(Doc) -> 
-	if is_tuple(Doc) -> 
-			doc_foldr (fun (Label, Value, List) -> [{Label, fields_rec(Value)} | List] end, [], Doc);
+	if is_tuple(Doc) ->
+            case Doc of
+                {bin, B1, B2} -> [bin, B1, B2];
+                {javascript, J1, J2} -> [javascript, J1, J2];
+                {mongostamp, M1, M2} -> [mongostamp, M1, M2];
+                {regex, R1, R2} -> [regex, R1, R2];
+                {I1, I2, I3} -> unixtime_to_secs(Doc);
+                _ ->
+                    doc_foldr (fun (Label, Value, List) -> [{Label, fields_rec(Value)} | List] end, [], Doc)
+            end;
 		true ->
 			if is_list(Doc) ->
 					case Doc of
