@@ -13,7 +13,7 @@
 -export ([lookup/2, lookup/3, at/2, include/2, exclude/2, update/3, merge/2, append/2]).
 -export ([doc_foldl/3, doc_foldr/3, fields/1, fields_rec/1, document/1, document_rec/1]).
 -export ([utf8/1, str/1]).
--export ([timenow/0, ms_precision/1, secs_to_unixtime/1, unixtime_to_secs/1]).
+-export ([timenow/0, timenow_china/0, ms_precision/1, secs_to_unixtime/1, unixtime_to_secs/1]).
 -export ([objectid/3, objectid_time/1]).
 
 -type maybe(A) :: {A} | {}.
@@ -264,10 +264,17 @@ str (CharData) -> case unicode:characters_to_list (CharData) of
 % Current unixtime to millisecond precision, ie. MicroSecs is always a multiple of 1000.
 timenow() -> ms_precision (os:timestamp()).
 
+-spec timenow () -> unixtime().
+timenow_china() -> ms_precision_china(os:timestamp()).
+
 -spec ms_precision (unixtime()) -> unixtime().
 %@doc Truncate microsecs to millisecs since bson drops microsecs anyway, so time will be equal before and after serialization.
 ms_precision ({MegaSecs, Secs, MicroSecs}) ->
 	{MegaSecs, Secs, MicroSecs div 1000 * 1000}.
+
+-spec ms_precision_china (unixtime()) -> unixtime().
+ms_precision_china ({MegaSecs, Secs, MicroSecs}) ->
+	{MegaSecs, Secs + 8 * 3600, MicroSecs div 1000 * 1000}.
 
 -type unixsecs() :: integer(). % Unix Time in seconds
 
