@@ -59,7 +59,7 @@ fields_rec(Doc) ->
                 {javascript, J1, J2} -> [javascript, J1, J2];
                 {mongostamp, M1, M2} -> [mongostamp, M1, M2];
                 {regex, R1, R2} -> [regex, R1, R2];
-                {I1, I2, I3} -> unixtime_to_secs(Doc);
+                {_, _, _} -> unixtime_to_secs(Doc);
                 _ ->
                     doc_foldr (fun (Label, Value, List) -> [{Label, fields_rec(Value)} | List] end, [], Doc)
             end;
