@@ -67,22 +67,46 @@ fields_rec(Doc) ->
 			if is_list(Doc) ->
 					case Doc of
 						[] -> Doc;
-						[A] -> [fields_rec(A)]
+						_ -> [fields_rec(E) || E <- Doc]
 					end;
 				true -> Doc
 			end
 	end.
 
-document_rec(Fields) -> list_to_tuple_smart(flatten_rec(Fields)).
+document_rec(Fields) -> flatten_rec(Fields).
 
-flatten_rec ([{Label, Value} | Fields]) -> 
-	[Label, list_to_tuple_smart(flatten_rec(Value)) | flatten_rec(Fields)];
-flatten_rec (A) -> A.
+flatten_rec(Value, [{Label, Value1} | Fields]) ->
+   case Fields of
+       [] ->
+           list_to_tuple(Value ++ [Label, flatten_rec(Value1)]);
+       _ ->
+           flatten_rec(Value ++ [Label, flatten_rec(Value1)], Fields)
+   end.
+    
+%% 是不是这种形式hash, 其实和fields_rec一样，要先区分hash和array
+flatten_rec ([{Label, Value} | Fields]) ->
+	Value1 = [Label, flatten_rec(Value)],
 
-list_to_tuple_smart(List) ->
-	if is_list(List) -> list_to_tuple(List);
-		true -> List
-	end.
+    case Fields of
+        [] -> list_to_tuple(Value1);
+        _ ->
+            flatten_rec(Value1, Fields)
+    end;
+       
+flatten_rec ([]) ->
+    [];
+flatten_rec (A) ->
+    if is_list(A) ->
+            [flatten_rec(E) || E <- A];
+       true -> A
+    end.
+
+
+list_to_tuple_smart(A) ->
+    if is_list(A) ->
+            list_to_tuple(A);
+       true -> A 
+    end.
 
 -spec document ([{label(), value()}]) -> document().
 %@doc Convert list of fields to a document
@@ -220,7 +244,7 @@ append (Doc1, Doc2) -> list_to_tuple (tuple_to_list (Doc1) ++ tuple_to_list (Doc
 
 -type utf8() :: unicode:unicode_binary().
 % binary() representing a string of characters encoded with UTF-8.
-% An Erlang string() is a list of unicode characters (codepoints), but this list must be converted to utf-8 binary for use in Bson. Call utf8/1 to do this, or encode pure ascii literals directly as `<<"abc">>' and non-pure ascii literals as `<<"a�c"/utf8>>'.
+% An Erlang string() is a list of unicode characters (codepoints), but this list must be converted to utf-8 binary for use in Bson. Call utf8/1 to do this, or encode pure ascii literals directly as `<<"abc">>' and non-pure ascii literals as `<<"aßc"/utf8>>'.
 
 -spec utf8 (unicode:chardata()) -> utf8().
 %@doc Convert string to utf8 binary. string() is a subtype of unicode:chardata().
