@@ -24,7 +24,7 @@
 % Conceptually a document is a list of label-value pairs (associative array, dictionary, record). However, for read/write-ability, it is implemented as a flat tuple, ie. the list becomes a tuple and the pair braces are elided, so you just have alternating labels and values where each value is associated with the previous label.
 % To distinguish a tagged value such as {uuid, _} (see value() type below) from a document with field name 'uuid' we made sure all valid tagged value types have an odd number of elements (documents have even number of elements). So actually only {bin, uuid, _} is a valid value, {uuid, _} is a document.
 
--type label() :: atom().
+-type label() :: atom() | binary().
 
 -spec doc_foldl (fun ((label(), value(), A) -> A), A, document()) -> A.
 %@doc Reduce document by applying given function to each field with result of previous field's application, starting with given initial result.
@@ -113,30 +113,42 @@ flatten ([{Label, Value} | Fields]) -> [Label, Value | flatten (Fields)].
 -spec lookup (label(), document()) -> maybe (value()).
 %@doc Value of field in document if there
 lookup (Label, Doc) ->
-	Parts = string:tokens (atom_to_list (Label), "."),
+    {FUN, FUN1} = if is_atom(Label) ->
+                          {fun erlang:atom_to_list/1, fun erlang:list_to_atom/1};
+                     true ->
+                          {fun erlang:binary_to_list/1, fun erlang:list_to_binary/1}
+                  end,
+    Parts = string:tokens (FUN (Label), "."),
+    
 	case length (Parts) of
 		1 ->
-			case find (list_to_atom (hd (Parts)), Doc) of
+			case find (FUN1 (hd (Parts)), Doc) of
 						{Index} -> {element (Index * 2 + 2, Doc)};
 						{} -> {} end;
 		_ ->
-			case find (list_to_atom (hd (Parts)), Doc) of
-				{Index} -> lookup (list_to_atom (string:join (tl (Parts), ".")), element (Index * 2 + 2, Doc));
+			case find (FUN1 (hd (Parts)), Doc) of
+				{Index} -> lookup (FUN1 (string:join (tl (Parts), ".")), element (Index * 2 + 2, Doc));
 				{} -> {} end
 	end.
 
 -spec lookup (label(), document(), value()) -> value().
 %@doc Value of field in document if there or default
 lookup (Label, Doc, Default) ->
-    Parts = string:tokens (atom_to_list (Label), "."),
+    {FUN, FUN1} = if is_atom(Label) ->
+                          {fun erlang:atom_to_list/1, fun erlang:list_to_atom/1};
+                     true ->
+                          {fun erlang:binary_to_list/1, fun erlang:list_to_binary/1}
+                  end,
+    Parts = string:tokens (FUN (Label), "."),
+
 	case length (Parts) of
 		1 ->
-			case find (list_to_atom (hd (Parts)), Doc) of
+			case find (FUN1 (hd (Parts)), Doc) of
 						{Index} -> element (Index * 2 + 2, Doc);
 						{} -> Default end;
 		_ ->
-			case find (list_to_atom (hd (Parts)), Doc) of
-				{Index} -> lookup (list_to_atom (string:join (tl (Parts), ".")), element (Index * 2 + 2, Doc));
+			case find (FUN1 (hd (Parts)), Doc) of
+				{Index} -> lookup (FUN1 (string:join (tl (Parts), ".")), element (Index * 2 + 2, Doc));
 				{} -> Default end
 	end.
 
@@ -177,19 +189,25 @@ exclude (Labels, Document) ->
 -spec update (label(), value(), document()) -> document().
 %@doc Replace field with new value, adding to end if new
 update (Label, Value, Document) ->
-	Parts = string:tokens (atom_to_list (Label), "."),
+	{FUN, FUN1} = if is_atom(Label) ->
+                          {fun erlang:atom_to_list/1, fun erlang:list_to_atom/1};
+                     true ->
+                          {fun erlang:binary_to_list/1, fun erlang:list_to_binary/1}
+                  end,
+    Parts = string:tokens (FUN (Label), "."),
+
 	case length (Parts) of
 		1 ->
-			case find (list_to_atom (hd (Parts)), Document) of
+			case find (FUN1 (hd (Parts)), Document) of
 				{Index} -> setelement (Index * 2 + 2, Document, Value);
 				{} ->
 					Doc = erlang:append_element (Document, Label),
 					erlang:append_element (Doc, Value) end;
 		_ ->
-			case find (list_to_atom (hd (Parts)), Document) of
-				{Index} -> setelement (Index * 2 + 2, Document, update (list_to_atom (string:join (tl (Parts), ".")), Value, element (Index * 2 + 2, Document)));
-				{} -> Doc = erlang:append_element (Document, list_to_atom (hd (Parts))),
-						erlang:append_element (Doc, update (list_to_atom (string:join (tl (Parts), ".")), Value, {})) end
+			case find (FUN1 (hd (Parts)), Document) of
+				{Index} -> setelement (Index * 2 + 2, Document, update (FUN1 (string:join (tl (Parts), ".")), Value, element (Index * 2 + 2, Document)));
+				{} -> Doc = erlang:append_element (Document, FUN1 (hd (Parts))),
+						erlang:append_element (Doc, update (FUN1 (string:join (tl (Parts), ".")), Value, {})) end
 	end.
 
 
@@ -222,6 +240,7 @@ append (Doc1, Doc2) -> list_to_tuple (tuple_to_list (Doc1) ++ tuple_to_list (Doc
 	regex() |
 	javascript() |
 	atom() |
+    binary() |
 	integer() |
 	mongostamp() |
 	minmaxkey().
