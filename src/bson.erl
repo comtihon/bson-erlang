@@ -101,13 +101,6 @@ flatten_rec (A) ->
        true -> A
     end.
 
-
-list_to_tuple_smart(A) ->
-    if is_list(A) ->
-            list_to_tuple(A);
-       true -> A 
-    end.
-
 -spec document ([{label(), value()}]) -> document().
 %@doc Convert list of fields to a document
 document (Fields) -> list_to_tuple (flatten (Fields)).
