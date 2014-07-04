@@ -55,6 +55,7 @@ fields (Doc) -> doc_foldr (fun (Label, Value, List) -> [{Label, Value} | List] e
 fields_rec(Doc) -> 
 	if is_tuple(Doc) ->
             case Doc of
+            	{} -> [{}];
                 {bin, B1, B2} -> [bin, B1, B2];
                 {javascript, J1, J2} -> [javascript, J1, J2];
                 {mongostamp, M1, M2} -> [mongostamp, M1, M2];
@@ -95,6 +96,8 @@ flatten_rec ([{Label, Value} | Fields]) ->
        
 flatten_rec ([]) ->
     [];
+flatten_rec ({}) ->
+    [{}];
 flatten_rec (A) ->
     if is_list(A) ->
             [flatten_rec(E) || E <- A];
