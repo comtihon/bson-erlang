@@ -96,8 +96,8 @@ flatten_rec ([{Label, Value} | Fields]) ->
        
 flatten_rec ([]) ->
     [];
-flatten_rec ({}) ->
-    [{}];
+flatten_rec ([{}]) ->
+    {};
 flatten_rec (A) ->
     if is_list(A) ->
             [flatten_rec(E) || E <- A];
