@@ -50,7 +50,15 @@ doc_foldrN (Fun, Acc, Doc, Low, High) ->
 
 -spec fields (document()) -> [{label(), value()}].
 %@doc Convert document to a list of all its fields
-fields (Doc) -> doc_foldr (fun (Label, Value, List) -> [{Label, Value} | List] end, [], Doc).
+fields (Doc) -> doc_foldr (fun (Label, Value, List) -> [{Label, remove_tuple(Value)} | List] end, [], Doc).
+
+remove_tuple(IdTuple) when is_tuple(IdTuple) ->
+    {BinaryId} = IdTuple,
+    <<Id:96>> = BinaryId,
+    Id;
+
+remove_tuple(Value) ->
+    Value.
 
 -spec document ([{label(), value()}]) -> document().
 %@doc Convert list of fields to a document
