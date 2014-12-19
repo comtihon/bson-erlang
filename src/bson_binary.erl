@@ -29,7 +29,7 @@ put_field (Name, Value) -> case Value of
 	UnixTime = {_, _, _} -> <<?put_tagname (9), (put_unixtime (UnixTime)) /binary>>;
 	V -> if
 		is_float (V) -> <<?put_tagname (1), ?put_float (V)>>;
-		is_binary (V) -> <<?put_tagname (2), (put_string (V)) /binary>>;
+		is_binary (V) -> <<?put_tagname (7), (put_string (V)) /binary>>;
 		is_tuple (V) -> <<?put_tagname (3), (put_document (V)) /binary>>;
 		is_list (V) -> <<?put_tagname (4), (put_array (V)) /binary>>;
 		is_atom (V) -> <<?put_tagname (14), (put_string (atom_to_binary (V, utf8))) /binary>>;
@@ -69,7 +69,7 @@ get_field (<<Tag:8, Bin0/binary>>) ->
 	{Name, Value, BinRest}.
 
 -spec put_string (bson:utf8()) -> binary().
-put_string (UBin) -> <<?put_int32 (byte_size (UBin) + 1), UBin /binary, 0:8>>.
+put_string (UBin) -> <<UBin /binary, 0:8>>.
 
 -spec get_string (binary()) -> {bson:utf8(), binary()}.
 get_string (<<?get_int32 (N), Bin /binary>>) ->
@@ -90,7 +90,8 @@ get_cstring (Bin) -> % list_to_tuple (binary:split (Bin, <<0>>)).
 -spec put_document (bson:document()) -> binary().
 put_document (Document) ->
 	Bin = bson:doc_foldl (fun put_field_accum/3, <<>>, Document),
-	<<?put_int32 (byte_size (Bin) + 5), Bin /binary, 0:8>>.
+	<<?put_int32 (byte_size (Bin) + 4), Bin /binary>>.
+
 put_field_accum (Label, Value, Bin) when is_atom(Label) ->
 	<<Bin /binary, (put_field (atom_to_binary (Label, utf8), Value)) /binary>>;
 put_field_accum (Label, Value, Bin) when is_binary(Label) ->
