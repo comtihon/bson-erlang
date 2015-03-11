@@ -195,7 +195,7 @@ append (Doc1, Doc2) -> list_to_tuple (tuple_to_list (Doc1) ++ tuple_to_list (Doc
 
 -type utf8() :: unicode:unicode_binary().
 % binary() representing a string of characters encoded with UTF-8.
-% An Erlang string() is a list of unicode characters (codepoints), but this list must be converted to utf-8 binary for use in Bson. Call utf8/1 to do this, or encode pure ascii literals directly as `<<"abc">>' and non-pure ascii literals as `<<"aßc"/utf8>>'.
+% An Erlang string() is a list of unicode characters (codepoints), but this list must be converted to utf-8 binary for use in Bson. Call utf8/1 to do this, or encode pure ascii literals directly as `<<"abc">>' and non-pure ascii literals as `<<"aÃŸc"/utf8>>'.
 
 -spec utf8 (unicode:chardata()) -> utf8().
 %@doc Convert string to utf8 binary. string() is a subtype of unicode:chardata().
