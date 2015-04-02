@@ -3,3 +3,7 @@ deps
 *.swo
 .eunit/
 **/*.beam
+out
+.idea
+.rebar
+*.iml
