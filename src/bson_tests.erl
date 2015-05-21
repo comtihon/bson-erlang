@@ -14,8 +14,12 @@ bson_test() ->
 	2 = bson:at ('b.x', Doc),
 	3 = bson:at ('b.y', Doc),
 	{} = bson:lookup ('b.b', Doc),
+	{} = bson:lookup ('b.z.z', Doc),
+	2 = bson:lookup ('b.x', Doc, default_value),
+	default_value = bson:lookup ('b.z.z', Doc, default_value),
 	null = bson:at (d, Doc),
 	{a, 1} = bson:include ([a], Doc),
+	{} = bson:include ([z], Doc),
 	{a, 1, 'b.x', 2} = bson:include ([a, 'b.x'], Doc),
 	{a, 1} = bson:exclude ([b,c], Doc),
 	{b, {x, 2, y, 3}, a, 1, c, 4.2} = bson:update (c, 4.2, Doc),
@@ -68,3 +72,30 @@ binary_test() ->
 			s2, 'MAX_KEY'},
 	Bin1 = bson_binary:put_document (Doc1),
 	{Doc1, <<>>} = bson_binary:get_document (Bin1).
+
+put_document_test() ->
+	Doc = {<<"key">>, <<"value">>},
+	?assertEqual({{key, <<"value">>}, <<>>}, bson_binary:get_document(bson_binary:put_document(Doc))).
+
+bson_int_too_large_test() ->
+	Doc1 = {int, 16#7fffffffffffffff + 1},
+	?assertError(bson_int_too_large, bson_binary:put_document(Doc1)),
+	Doc2 = {int, -16#8000000000000000 - 1},
+	?assertError(bson_int_too_large, bson_binary:put_document(Doc2)).
+
+bad_bson_test() ->
+	Doc = {function, fun() -> ok end},
+	?assertError(bad_bson, bson_binary:put_document(Doc)).
+
+bson_document_test() ->
+	Proplist = [{key1, value1}, {key2, [{key3, value3}]}],
+	?assertEqual({key1, value1, key2, [{key3, value3}]}, bson:document(Proplist)),
+	?assertError(function_clause, bson:document(not_list)).
+
+str_test() ->
+	?assertEqual("test", bson:str(<<"test">>)),
+	?assertError(unicode_incomplete, bson:str(<<"test", 209>>)),
+	?assertError(unicode_error, bson:str(<<1,2,255,255>>)).
+
+utf8_test() ->
+	?assertEqual(<<"test">>, bson:utf8("test")).
