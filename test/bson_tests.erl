@@ -6,7 +6,7 @@ bson_test() ->
   Doc = {b, {x, 2, y, 3},
     a, 1,
     c, [mon, tue, wed]},
-  {1} = bson:lookup(a, Doc),
+  1 = bson:lookup(a, Doc),
   {} = bson:lookup(d, Doc),
   2 = bson:lookup(d, Doc, 2),
   1 = bson:lookup(a, Doc, 3),
