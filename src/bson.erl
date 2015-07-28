@@ -31,7 +31,7 @@
 %% field name 'uuid' we made sure all valid tagged value types have an odd number of elements
 %% (documents have even number of elements). So actually only {bin, uuid, _} is a valid value, {uuid, _} is a document.
 
--type label() :: binary().
+-type label() :: binary() | atom().
 
 -spec doc_foldl(fun ((label(), value(), A) -> A), A, document()) -> A.
 %% @doc Reduce document by applying given function to each field with result of previous field's

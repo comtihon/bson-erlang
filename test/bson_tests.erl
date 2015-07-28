@@ -3,33 +3,36 @@
 -include_lib("eunit/include/eunit.hrl").
 
 bson_test() ->
-  Doc = {b, {x, 2, y, 3},
-    a, 1,
-    c, [mon, tue, wed]},
-  1 = bson:lookup(a, Doc),
-  {} = bson:lookup(d, Doc),
-  2 = bson:lookup(d, Doc, 2),
-  1 = bson:lookup(a, Doc, 3),
-  1 = bson:at(a, Doc),
-  2 = bson:at('b.x', Doc),
-  3 = bson:at('b.y', Doc),
-  {} = bson:lookup('b.b', Doc),
-  {} = bson:lookup('b.z.z', Doc),
-  2 = bson:lookup('b.x', Doc, default_value),
-  default_value = bson:lookup('b.z.z', Doc, default_value),
-  null = bson:at(d, Doc),
-  {a, 1} = bson:include([a], Doc),
+  Doc =
+    {
+      <<"b">>, {x, 2, y, 3},
+      <<"a">>, 1,
+      <<"c">>, [mon, tue, wed]
+    },
+  1 = bson:lookup(<<"a">>, Doc),
+  {} = bson:lookup(<<"d">>, Doc),
+  2 = bson:lookup(<<"d">>, Doc, 2),
+  1 = bson:lookup(<<"a">>, Doc, 3),
+  1 = bson:at(<<"a">>, Doc),
+  2 = bson:at(<<"b.x">>, Doc),
+  3 = bson:at(<<"b.y">>, Doc),
+  {} = bson:lookup(<<"b.b">>, Doc),
+  {} = bson:lookup(<<"b.z.z">>, Doc),
+  2 = bson:lookup(<<"b.x">>, Doc, default_value),
+  default_value = bson:lookup(<<"b.z.z">>, Doc, default_value),
+  null = bson:at(<<"d">>, Doc),
+  {<<"a">>, 1} = bson:include([<<"a">>], Doc),
   {} = bson:include([z], Doc),
-  {a, 1, 'b.x', 2} = bson:include([a, 'b.x'], Doc),
-  {a, 1} = bson:exclude([b, c], Doc),
-  {b, {x, 2, y, 3}, a, 1, c, 4.2} = bson:update(c, 4.2, Doc),
-  {b, {x, 13, y, 3}, a, 1, c, [mon, tue, wed]} = bson:update('b.x', 13, Doc),
-  {b, {x, 2, y, 14}, a, 1, c, [mon, tue, wed]} = bson:update('b.y', 14, Doc),
-  {b, {x, 2, y, 3, <<"z">>, 0}, a, 1, c, [mon, tue, wed]} = bson:update('b.z', 0, Doc),
-  {b, {x, 2, y, 3}, a, 1, c, [mon, tue, wed], <<"d">>, {<<"x">>, 15}} = bson:update('d.x', 15, Doc),
-  {b, 0, a, 1, c, 2, <<"d">>, 3} = bson:merge({c, 2, d, 3, b, 0}, Doc),
-  {a, 1, b, 2, c, 3, d, 4} = bson:append({a, 1, b, 2}, {c, 3, d, 4}),
-  [{b, {x, 2, y, 3}}, {a, 1}, {c, [mon, tue, wed]}] = bson:fields(Doc).
+  {<<"a">>, 1, <<"b.x">>, 2} = bson:include([<<"a">>, <<"b.x">>], Doc),
+  {<<"a">>, 1} = bson:exclude([<<"b">>, <<"c">>], Doc),
+  {<<"b">>, {x, 2, y, 3}, <<"a">>, 1, <<"c">>, 4.2} = bson:update(<<"c">>, 4.2, Doc),
+  {<<"b">>, {x, 13, y, 3}, <<"a">>, 1, <<"c">>, [mon, tue, wed]} = bson:update(<<"b.x">>, 13, Doc),
+  {<<"b">>, {x, 2, y, 14}, <<"a">>, 1, <<"c">>, [mon, tue, wed]} = bson:update(<<"b.y">>, 14, Doc),
+  {<<"b">>, {x, 2, y, 3, <<"z">>, 0}, <<"a">>, 1, <<"c">>, [mon, tue, wed]} = bson:update(<<"b.z">>, 0, Doc),
+  {<<"b">>, {x, 2, y, 3}, <<"a">>, 1, <<"c">>, [mon, tue, wed], <<"d">>, {<<"x">>, 15}} = bson:update(<<"d.x">>, 15, Doc),
+  {<<"b">>, 0, <<"a">>, 1, <<"c">>, 2, <<"d">>, 3} = bson:merge({<<"c">>, 2, <<"d">>, 3, <<"b">>, 0}, Doc),
+  {<<"a">>, 1, <<"b">>, 2, <<"c">>, 3, d, 4} = bson:append({<<"a">>, 1, <<"b">>, 2}, {<<"c">>, 3, d, 4}),
+  [{<<"b">>, {x, 2, y, 3}}, {<<"a">>, 1}, {<<"c">>, [mon, tue, wed]}] = bson:fields(Doc).
 
 time_test() ->
   {MegaSecs, Secs, _} = bson:timenow(),
@@ -71,7 +74,7 @@ binary_test() ->
     <<"s1">>, 'MIN_KEY',
     <<"s2">>, 'MAX_KEY'},
   Bin1 = bson_binary:put_document(Doc1),
-  {Doc1, <<>>} = bson_binary:get_document(Bin1).
+  ?assertEqual({Doc1, <<>>}, bson_binary:get_document(Bin1)).
 
 put_document_test() ->
   Doc = {<<"key">>, <<"value">>},
