@@ -88,7 +88,7 @@ lookup(Label, Doc, Default) ->
         {} -> Default end;
     _ ->
       case find(list_to_atom(hd(Parts)), Doc) of
-        {Index} -> lookup(list_to_atom(string:join(tl(Parts), ".")), element(Index * 2 + 2, Doc));
+        {Index} -> lookup(list_to_atom(string:join(tl(Parts), ".")), element(Index * 2 + 2, Doc), Default);
         {} -> Default end
   end.
 

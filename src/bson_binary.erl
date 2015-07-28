@@ -141,7 +141,7 @@ put_closure(Code, Env) ->
 
 -spec get_closure(binary()) -> {bson:utf8(), bson:document(), binary()}.
 get_closure(<<?get_int32(N), Bin/binary>>) ->
-  _Size = N - 4,
+  _ = N - 4, %TODO?
   {Code, Bin1} = get_string(Bin),
   {Env, Bin2} = get_document(Bin1),
   {Code, Env, Bin2}.
