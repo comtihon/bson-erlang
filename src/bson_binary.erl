@@ -99,7 +99,7 @@ get_document(<<?get_int32(N), Bin/binary>>) ->
 get_fields(<<>>) -> [];
 get_fields(Bin) ->
   {Name, Value, Bin1} = get_field(Bin),
-  [binary_to_atom(Name, utf8), Value | get_fields(Bin1)].
+  [Name, Value | get_fields(Bin1)].
 
 -spec put_array(bson:arr()) -> binary().
 % encoded same as document with labels '0', '1', etc.
