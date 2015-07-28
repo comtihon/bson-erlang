@@ -4,6 +4,7 @@ deps
 .eunit/
 **/*.beam
 .rebar
-.idea
-*.iml
 out
+.idea
+.rebar
+*.iml

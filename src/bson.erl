@@ -25,7 +25,7 @@
 % Conceptually a document is a list of label-value pairs (associative array, dictionary, record). However, for read/write-ability, it is implemented as a flat tuple, ie. the list becomes a tuple and the pair braces are elided, so you just have alternating labels and values where each value is associated with the previous label.
 % To distinguish a tagged value such as {uuid, _} (see value() type below) from a document with field name 'uuid' we made sure all valid tagged value types have an odd number of elements (documents have even number of elements). So actually only {bin, uuid, _} is a valid value, {uuid, _} is a document.
 
--type label() :: atom().
+-type label() :: binary().
 
 -spec doc_foldl(fun ((label(), value(), A) -> A), A, document()) -> A.
 %@doc Reduce document by applying given function to each field with result of previous field's application, starting with given initial result.
@@ -64,31 +64,34 @@ flatten([{Label, Value} | Fields]) -> [Label, Value | flatten(Fields)].
 
 -spec lookup(label(), document()) -> maybe (value()).
 %@doc Value of field in document if there
+lookup(Label, Doc) when is_atom(Label) -> lookup(atom_to_binary(Label, utf8), Doc);
 lookup(Label, Doc) ->
-  Parts = string:tokens(atom_to_list(Label), "."),
+  Parts = binary:split(Label, <<".">>, []),
   case length(Parts) of
     1 ->
-      case find(list_to_atom(hd(Parts)), Doc) of
+      case find(hd(Parts), Doc) of
         {Index} -> {element(Index * 2 + 2, Doc)};
         {} -> {} end;
     _ ->
-      case find(list_to_atom(hd(Parts)), Doc) of
-        {Index} -> lookup(list_to_atom(string:join(tl(Parts), ".")), element(Index * 2 + 2, Doc));
+      case find(hd(Parts), Doc) of
+        {Index} -> lookup(hd(tl(Parts)), element(Index * 2 + 2, Doc));
         {} -> {} end
   end.
 
 -spec lookup(label(), document(), value()) -> value().
 %@doc Value of field in document if there or default
+lookup(Label, Doc, Default) when is_atom(Label) ->
+  lookup(atom_to_binary(Label, utf8), Doc, Default);
 lookup(Label, Doc, Default) ->
-  Parts = string:tokens(atom_to_list(Label), "."),
+  Parts = binary:split(Label, <<".">>, []),
   case length(Parts) of
     1 ->
-      case find(list_to_atom(hd(Parts)), Doc) of
+      case find(hd(Parts), Doc) of
         {Index} -> element(Index * 2 + 2, Doc);
         {} -> Default end;
     _ ->
-      case find(list_to_atom(hd(Parts)), Doc) of
-        {Index} -> lookup(list_to_atom(string:join(tl(Parts), ".")), element(Index * 2 + 2, Doc));
+      case find(hd(Parts), Doc) of
+        {Index} -> lookup(hd(tl(Parts)), element(Index * 2 + 2, Doc), Default);
         {} -> Default end
   end.
 
@@ -99,16 +102,26 @@ find(Label, Doc) -> findN(Label, Doc, 0, tuple_size(Doc) div 2).
 -spec findN(label(), document(), integer(), integer()) -> maybe (integer()).
 %@doc Find field index in document from first index (inclusive) to second index (exclusive).
 findN(_Label, _Doc, High, High) -> {};
-findN(Label, Doc, Low, High) -> case element(Low * 2 + 1, Doc) of
-                                  Label -> {Low};
-                                  _ -> findN(Label, Doc, Low + 1, High) end.
+findN(Label, Doc, Low, High) ->
+  case element(Low * 2 + 1, Doc) of
+    Label -> {Low};
+    AtomKey when is_atom(AtomKey) ->
+      case atom_to_binary(AtomKey, utf8) =:= Label of
+         true -> {Low};
+         false -> findN(Label, Doc, Low + 1, High)
+      end;
+    _ -> findN(Label, Doc, Low + 1, High)
+  end.
 
 -spec at(label(), document()) -> value().
 %@doc Value of field in document, error if missing
-at(Label, Document) -> case lookup(Label, Document) of
-% {} -> erlang:error (missing_field, [Label, Document]);
-                         {} -> null;
-                         {Value} -> Value end.
+at(Label, Document) when is_atom(Label) ->
+  at(atom_to_binary(Label, utf8), Document);
+at(Label, Document) ->
+  case lookup(Label, Document) of
+    {} -> null;
+    {Value} -> Value
+  end.
 
 -spec include([label()], document()) -> document().
 %@doc Project given fields of document
@@ -128,21 +141,23 @@ exclude(Labels, Document) ->
 
 -spec update(label(), value(), document()) -> document().
 %@doc Replace field with new value, adding to end if new
+update(Label, Value, Document) when is_atom(Label) ->
+  update(atom_to_binary(Label, utf8), Value, Document);
 update(Label, Value, Document) ->
-  Parts = string:tokens(atom_to_list(Label), "."),
+  Parts = binary:split(Label, <<".">>, []),
   case length(Parts) of
     1 ->
-      case find(list_to_atom(hd(Parts)), Document) of
+      case find(hd(Parts), Document) of
         {Index} -> setelement(Index * 2 + 2, Document, Value);
         {} ->
           Doc = erlang:append_element(Document, Label),
           erlang:append_element(Doc, Value) end;
     _ ->
-      case find(list_to_atom(hd(Parts)), Document) of
+      case find(hd(Parts), Document) of
         {Index} ->
-          setelement(Index * 2 + 2, Document, update(list_to_atom(string:join(tl(Parts), ".")), Value, element(Index * 2 + 2, Document)));
-        {} -> Doc = erlang:append_element(Document, list_to_atom(hd(Parts))),
-          erlang:append_element(Doc, update(list_to_atom(string:join(tl(Parts), ".")), Value, {})) end
+          setelement(Index * 2 + 2, Document, update(hd(tl(Parts)), Value, element(Index * 2 + 2, Document)));
+        {} -> Doc = erlang:append_element(Document, hd(Parts)),
+          erlang:append_element(Doc, update(hd(tl(Parts)), Value, {})) end
   end.
 
 
