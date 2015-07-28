@@ -2,7 +2,6 @@
 %% This implements version 1.0 of that spec.
 -module(bson).
 
--export_type([maybe/1]).
 -export_type([document/0, label/0, value/0]).
 -export_type([arr/0]).
 -export_type([bin/0, bfunction/0, uuid/0, md5/0, userdefined/0]).
@@ -17,8 +16,6 @@
 -export([timenow/0, ms_precision/1, secs_to_unixtime/1, unixtime_to_secs/1]).
 -export([objectid/3, objectid_time/1]).
 -export([map_to_bson/1, proplist_to_bson/1]).
-
--type maybe(A) :: {A} | {}.
 
 % Document %
 
@@ -87,19 +84,19 @@ lookup(Label, Doc, Default) ->
       lookup(Parts, Doc, fun(Index) -> lookup(hd(tl(Parts)), element(Index * 2 + 2, Doc), Default) end, Default)
   end.
 
--spec find(label(), document()) -> maybe (integer()).
+-spec find(label(), document()) -> integer() | {}.
 %% @doc Index of field in document if there
 find(Label, Doc) -> findN(Label, Doc, 0, tuple_size(Doc) div 2).
 
--spec findN(label(), document(), integer(), integer()) -> maybe (integer()).
+-spec findN(label(), document(), integer(), integer()) -> integer() | {}.
 %% @doc Find field index in document from first index (inclusive) to second index (exclusive).
 findN(_Label, _Doc, High, High) -> {};
 findN(Label, Doc, Low, High) ->
   case element(Low * 2 + 1, Doc) of
-    Label -> {Low};
+    Label -> Low;
     AtomKey when is_atom(AtomKey) ->
       case atom_to_binary(AtomKey, utf8) =:= Label of
-        true -> {Low};
+        true -> Low;
         false -> findN(Label, Doc, Low + 1, High)
       end;
     _ -> findN(Label, Doc, Low + 1, High)
@@ -301,13 +298,13 @@ proplist_to_bson(Proplist) ->
 %% @private
 lookup(Parts, Doc, GetFun, Default) ->
   case find(hd(Parts), Doc) of
-    {Index} -> GetFun(Index);
-    {} -> Default
+    {} -> Default;
+    Index -> GetFun(Index)
   end.
 
 %% @private
 update(Parts, Document, Value, SetFun, AppendFun) ->
   case find(hd(Parts), Document) of
-    {Index} -> SetFun(Index, Value);
-    {} -> AppendFun(Value)
+    {} -> AppendFun(Value);
+    Index -> SetFun(Index, Value)
   end.
