@@ -103,7 +103,7 @@ str_test() ->
 utf8_test() ->
   ?assertEqual(<<"test">>, bson:utf8("test")).
 
-maps_test() ->
+maps_put_test() ->
   SimpleMap = #{<<"map">> => true, <<"simple">> => <<"very">>, atom => key, array => [1, 2, 3, 4]},
   Encoded1 = bson_binary:put_document(SimpleMap),
   {Decoded1, <<>>} = bson_binary:get_document(Encoded1),
@@ -112,3 +112,18 @@ maps_test() ->
   Encoded2 = bson_binary:put_document(MapWithMap),
   {Decoded2, <<>>} = bson_binary:get_document(Encoded2),
   ?assertEqual({<<"map">>, true, <<"simple">>, <<"not">>, <<"why">>, {<<"ok">>, true, <<"because">>, <<"with map">>}}, Decoded2).
+
+maps_get_test() ->
+  SimpleMap = #{<<"map">> => true, <<"simple">> => <<"very">>, <<"atom">> => key, <<"array">> => [1, 2, 3, 4]},
+  Encoded1 = bson_binary:put_document(SimpleMap),
+  {GotMap, <<>>} = bson_binary:get_map(Encoded1),
+  ?assertEqual(SimpleMap, GotMap),
+  AtomMap = #{map => true, simple => <<"very">>, atom => key, array => [1, 2, 3, 4]},
+  Encoded2 = bson_binary:put_document(AtomMap),
+  {GotMap2, <<>>} = bson_binary:get_map(Encoded2),
+  ?assertEqual(SimpleMap, GotMap2),
+  ?assertNotEqual(AtomMap, GotMap2),
+  MapWithMap = #{<<"map">> => true, <<"simple">> => <<"not">>, <<"why">> => #{<<"because">> => <<"with map">>, <<"ok">> => true}},
+  Encoded3 = bson_binary:put_document(MapWithMap),
+  {GotMap3, <<>>} = bson_binary:get_map(Encoded3),
+  ?assertEqual(MapWithMap, GotMap3).

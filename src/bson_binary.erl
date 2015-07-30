@@ -1,7 +1,7 @@
 %@doc Standard binary encoding of Bson documents, version 1.0. See bsonspec.org.
 -module(bson_binary).
 
--export([put_document/1, get_document/1, put_cstring/1, get_cstring/1]).
+-export([put_document/1, get_document/1, get_map/1, put_cstring/1, get_cstring/1]).
 
 -include("bson_binary.hrl").
 
@@ -11,8 +11,8 @@
 -define(put_tagname(Tag, N), (Tag):8, (put_cstring(N)) / binary).
 % Name is expected to be in scope at call site
 
--spec put_cstring(bson:utf8()) -> binary().
 %% @doc utf8 binary cannot contain a 0 byte.
+-spec put_cstring(bson:utf8()) -> binary().
 put_cstring(UBin) -> <<UBin/binary, 0:8>>.
 
 -spec get_cstring(binary()) -> {bson:utf8(), binary()}.
@@ -26,12 +26,36 @@ put_document(Document) ->
   Bin = bson:doc_foldl(fun put_field_accum/3, <<>>, Document),
   <<?put_int32(byte_size(Bin) + 5), Bin/binary, 0:8>>.
 
+-spec get_document(binary()) -> {bson:document(), binary()}.
+get_document(<<?get_int32(N), Bin/binary>>) ->
+  Size = N - 5,
+  <<DocBin:Size/binary, 0:8, Bin1/binary>> = Bin,
+  Doc = list_to_tuple(get_fields(DocBin, [])),
+  {Doc, Bin1}.
+
+-spec get_map(binary()) -> {map(), binary()}.
+get_map(<<?get_int32(N), Bin/binary>>) ->
+  Size = N - 5,
+  <<DocBin:Size/binary, 0:8, Bin1/binary>> = Bin,
+  Doc = get_fields(DocBin, #{}),
+  {Doc, Bin1}.
+
 
 %% @private
 put_field_accum(Label, Value, Bin) when is_atom(Label) ->
   <<Bin/binary, (put_field(atom_to_binary(Label, utf8), Value))/binary>>;
 put_field_accum(Label, Value, Bin) when is_binary(Label) ->
   <<Bin/binary, (put_field(Label, Value))/binary>>.
+
+%% @private
+get_fields(<<>>, Acc) when is_map(Acc) -> Acc;
+get_fields(<<>>, Acc) -> lists:reverse(Acc);
+get_fields(Bin, Acc) when is_map(Acc) ->
+  {Name, Value, Bin1} = get_field(Bin, map),
+  get_fields(Bin1, Acc#{Name => Value});
+get_fields(Bin, Acc) ->
+  {Name, Value, Bin1} = get_field(Bin, normal),
+  get_fields(Bin1, [Value, Name | Acc]).
 
 %% @private
 -spec put_field(bson:utf8(), bson:value()) -> binary().
@@ -59,63 +83,65 @@ put_field(N, V) when is_integer(V) -> erlang:error(bson_int_too_large, [N, V]);
 put_field(N, V) -> erlang:error(bad_bson, [N, V]).
 
 %% @private
-get_field(<<1:8, _/binary>>, _, Bin1) ->
+get_field(<<1:8, _/binary>>, _, Bin1, _) ->
   <<?get_float(N), Bin2/binary>> = Bin1,
   {N, Bin2};
-get_field(<<2:8, _/binary>>, _, Bin1) ->
+get_field(<<2:8, _/binary>>, _, Bin1, _) ->
   get_string(Bin1);
-get_field(<<3:8, _/binary>>, _, Bin1) ->
+get_field(<<3:8, _/binary>>, _, Bin1, map) ->
+  get_map(Bin1);
+get_field(<<3:8, _/binary>>, _, Bin1, _) ->
   get_document(Bin1);
-get_field(<<4:8, _/binary>>, _, Bin1) ->
-  get_array(Bin1);
-get_field(<<5:8, _/binary>>, _, Bin1) ->
+get_field(<<4:8, _/binary>>, _, Bin1, Type) ->
+  get_array(Bin1, Type);
+get_field(<<5:8, _/binary>>, _, Bin1, _) ->
   {BinType, Bin, Bin2} = get_binary(Bin1),
   {{bin, BinType, Bin}, Bin2};
-get_field(<<6:8, _/binary>>, _, Bin1) -> % Treat the deprecated "undefined" value as null, which we call 'undefined'!
+get_field(<<6:8, _/binary>>, _, Bin1, _) -> % Treat the deprecated "undefined" value as null, which we call 'undefined'!
   {undefined, Bin1};
-get_field(<<7:8, _/binary>>, _, Bin1) ->
+get_field(<<7:8, _/binary>>, _, Bin1, _) ->
   {Oid, Bin2} = get_oid(Bin1),
   {{Oid}, Bin2};
-get_field(<<8:8, _/binary>>, _, <<Bit:8, Bin2/binary>>) ->
+get_field(<<8:8, _/binary>>, _, <<Bit:8, Bin2/binary>>, _) ->
   {Bit == 1, Bin2};
-get_field(<<9:8, _/binary>>, _, Bin1) ->
+get_field(<<9:8, _/binary>>, _, Bin1, _) ->
   get_unixtime(Bin1);
-get_field(<<10:8, _/binary>>, _, Bin1) ->
+get_field(<<10:8, _/binary>>, _, Bin1, _) ->
   {undefined, Bin1};
-get_field(<<11:8, _/binary>>, _, Bin1) ->
+get_field(<<11:8, _/binary>>, _, Bin1, _) ->
   {Pat, Bin2} = get_cstring(Bin1),
   {Opt, Bin3} = get_cstring(Bin2),
   {{regex, Pat, Opt}, Bin3};
-get_field(<<13:8, _/binary>>, _, Bin1) ->
+get_field(<<13:8, _/binary>>, _, Bin1, _) ->
   {Code, Bin2} = get_string(Bin1),
   {{javascript, {}, Code}, Bin2};
-get_field(<<14:8, _/binary>>, _, Bin1) ->
+get_field(<<14:8, _/binary>>, _, Bin1, _) ->
   {UBin, Bin2} = get_string(Bin1),
   {binary_to_atom(UBin, utf8), Bin2};
-get_field(<<15:8, _/binary>>, _, Bin1) ->
+get_field(<<15:8, _/binary>>, _, Bin1, _) ->
   {Code, Env, Bin2} = get_closure(Bin1),
   {{javascript, Env, Code}, Bin2};
-get_field(<<16:8, _/binary>>, _, Bin1) ->
+get_field(<<16:8, _/binary>>, _, Bin1, _) ->
   <<?get_int32(N), Bin2/binary>> = Bin1,
   {N, Bin2};
-get_field(<<17:8, _/binary>>, _, Bin1) ->
+get_field(<<17:8, _/binary>>, _, Bin1, _) ->
   <<?get_int32(Inc), ?get_int32(Tim), Bin2/binary>> = Bin1,
   {{mongostamp, Inc, Tim}, Bin2};
-get_field(<<18:8, _/binary>>, _, Bin1) ->
+get_field(<<18:8, _/binary>>, _, Bin1, _) ->
   <<?get_int64(N), Bin2/binary>> = Bin1,
   {N, Bin2};
-get_field(<<127:8, _/binary>>, _, Bin1) ->
+get_field(<<127:8, _/binary>>, _, Bin1, _) ->
   {'MAX_KEY', Bin1};
-get_field(<<255:8, _/binary>>, _, Bin1) ->
+get_field(<<255:8, _/binary>>, _, Bin1, _) ->
   {'MIN_KEY', Bin1};
-get_field(<<Tag:8, Bin0/binary>>, _, _) ->
+get_field(<<Tag:8, Bin0/binary>>, _, _, _) ->
   erlang:error(unknown_bson_tag, [<<Tag:8, Bin0/binary>>]).
 
 %% @private
--spec get_field(binary()) -> {bson:utf8(), bson:value(), binary()}.
-get_field(R = <<_:8, Bin0/binary>>) ->
+-spec get_field(binary(), atom()) -> {bson:utf8(), bson:value(), binary()}.
+get_field(R = <<_:8, Bin0/binary>>, Type) ->
   {Name, Bin1} = get_cstring(Bin0),
-  {Value, BinRest} = get_field(R, Name, Bin1),
+  {Value, BinRest} = get_field(R, Name, Bin1, Type),
   {Name, Value, BinRest}.
 
 %% @private
@@ -129,19 +155,6 @@ get_string(<<?get_int32(N), Bin/binary>>) ->
   <<UBin:Size/binary, 0:8, Rest/binary>> = Bin,
   {UBin, Rest}.
 
--spec get_document(binary()) -> {bson:document(), binary()}.
-get_document(<<?get_int32(N), Bin/binary>>) ->
-  Size = N - 5,
-  <<DocBin:Size/binary, 0:8, Bin1/binary>> = Bin,
-  Doc = list_to_tuple(get_fields(DocBin)),
-  {Doc, Bin1}.
-
-%% @private
-get_fields(<<>>) -> [];
-get_fields(Bin) ->
-  {Name, Value, Bin1} = get_field(Bin),
-  [Name, Value | get_fields(Bin1)].
-
 %% @private
 -spec put_array(bson:arr()) -> binary().
 % encoded same as document with labels '0', '1', etc.
@@ -154,19 +167,19 @@ put_value_accum(Value, {N, Bin}) ->
   {N + 1, <<Bin/binary, (put_field(bson:utf8(integer_to_list(N)), Value))/binary>>}.
 
 %% @private
--spec get_array(binary()) -> {bson:arr(), binary()}.
+-spec get_array(binary(), normal | map) -> {bson:arr(), binary()}.
 % encoded same as document with labels '0', '1', etc. which we ignore
-get_array(<<?get_int32(N), Bin/binary>>) ->
+get_array(<<?get_int32(N), Bin/binary>>, Type) ->
   Size = N - 5,
   <<DBin:Size/binary, 0:8, Bin1/binary>> = Bin,
-  Array = get_values(DBin),
+  Array = get_values(DBin, Type),
   {Array, Bin1}.
 
 %% @private
-get_values(<<>>) -> [];
-get_values(Bin) ->
-  {_, Value, Bin1} = get_field(Bin),
-  [Value | get_values(Bin1)].
+get_values(<<>>, _) -> [];
+get_values(Bin, Type) ->
+  {_, Value, Bin1} = get_field(Bin, Type),
+  [Value | get_values(Bin1, Type)].
 
 -type bintype() :: bin | function | uuid | md5 | userdefined.
 

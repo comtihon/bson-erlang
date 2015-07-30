@@ -15,7 +15,6 @@
 -export([utf8/1, str/1]).
 -export([timenow/0, ms_precision/1, secs_to_unixtime/1, unixtime_to_secs/1]).
 -export([objectid/3, objectid_time/1]).
--export([map_to_bson/1, proplist_to_bson/1]).
 
 % Document %
 
@@ -289,14 +288,6 @@ objectid(UnixSecs, MachineAndProcId, Count) ->
 %% @doc Time when object id was generated
 -spec objectid_time(objectid()) -> unixtime().
 objectid_time({<<UnixSecs:32/big, _:64>>}) -> secs_to_unixtime(UnixSecs).
-
-map_to_bson(Map) ->
-  proplist_to_bson(maps:to_list(Map)).
-
--spec proplist_to_bson(proplists:proplist()) -> document().
-proplist_to_bson(Proplist) ->
-  L = lists:foldr(fun({A, B}, Acc) -> [A | [B | Acc]] end, [], Proplist),
-  list_to_tuple(L).
 
 
 %% @private
