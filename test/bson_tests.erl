@@ -102,3 +102,13 @@ str_test() ->
 
 utf8_test() ->
   ?assertEqual(<<"test">>, bson:utf8("test")).
+
+maps_test() ->
+  SimpleMap = #{<<"map">> => true, <<"simple">> => <<"very">>, atom => key, array => [1, 2, 3, 4]},
+  Encoded1 = bson_binary:put_document(SimpleMap),
+  {Decoded1, <<>>} = bson_binary:get_document(Encoded1),
+  ?assertEqual({<<"array">>, [1, 2, 3, 4], <<"atom">>, key, <<"map">>, true, <<"simple">>, <<"very">>}, Decoded1),
+  MapWithMap = #{<<"map">> => true, <<"simple">> => <<"not">>, <<"why">> => #{<<"because">> => <<"with map">>, ok => true}},
+  Encoded2 = bson_binary:put_document(MapWithMap),
+  {Decoded2, <<>>} = bson_binary:get_document(Encoded2),
+  ?assertEqual({<<"map">>, true, <<"simple">>, <<"not">>, <<"why">>, {<<"ok">>, true, <<"because">>, <<"with map">>}}, Decoded2).

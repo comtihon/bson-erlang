@@ -11,6 +11,29 @@
 -define(put_tagname(Tag, N), (Tag):8, (put_cstring(N)) / binary).
 % Name is expected to be in scope at call site
 
+-spec put_cstring(bson:utf8()) -> binary().
+%% @doc utf8 binary cannot contain a 0 byte.
+put_cstring(UBin) -> <<UBin/binary, 0:8>>.
+
+-spec get_cstring(binary()) -> {bson:utf8(), binary()}.
+get_cstring(Bin) -> % list_to_tuple (binary:split (Bin, <<0>>)).
+  {Pos, _Len} = binary:match(Bin, <<0>>), % _Len = 1 but don't match 1 to avoid check
+  <<UBin:Pos/binary, 0:8, Rest/binary>> = Bin,
+  {UBin, Rest}.
+
+-spec put_document(bson:document()) -> binary().
+put_document(Document) ->
+  Bin = bson:doc_foldl(fun put_field_accum/3, <<>>, Document),
+  <<?put_int32(byte_size(Bin) + 5), Bin/binary, 0:8>>.
+
+
+%% @private
+put_field_accum(Label, Value, Bin) when is_atom(Label) ->
+  <<Bin/binary, (put_field(atom_to_binary(Label, utf8), Value))/binary>>;
+put_field_accum(Label, Value, Bin) when is_binary(Label) ->
+  <<Bin/binary, (put_field(Label, Value))/binary>>.
+
+%% @private
 -spec put_field(bson:utf8(), bson:value()) -> binary().
 put_field(N, false) -> <<?put_tagname(8, N), 0:8>>;
 put_field(N, true) -> <<?put_tagname(8, N), 1:8>>;
@@ -28,27 +51,12 @@ put_field(N, V) when is_float(V) -> <<?put_tagname(1, N), ?put_float(V)>>;
 put_field(N, V) when is_binary(V) -> <<?put_tagname(2, N), (put_string(V))/binary>>;
 put_field(N, V) when is_tuple(V) -> <<?put_tagname(3, N), (put_document(V))/binary>>;
 put_field(N, V) when is_list(V) -> <<?put_tagname(4, N), (put_array(V))/binary>>;
+put_field(N, V) when is_map(V) -> <<?put_tagname(3, N), (put_document(V))/binary>>;
 put_field(N, V) when is_atom(V) -> <<?put_tagname(14, N), (put_string(atom_to_binary(V, utf8)))/binary>>;
 put_field(N, V) when is_integer(V) andalso ?fits_int32(V) -> <<?put_tagname(16, N), ?put_int32(V)>>;
 put_field(N, V) when is_integer(V) andalso ?fits_int64(V) -> <<?put_tagname(18, N), ?put_int64(V)>>;
 put_field(N, V) when is_integer(V) -> erlang:error(bson_int_too_large, [N, V]);
 put_field(N, V) -> erlang:error(bad_bson, [N, V]).
-
--spec put_cstring(bson:utf8()) -> binary().
-%% @doc utf8 binary cannot contain a 0 byte.
-put_cstring(UBin) -> <<UBin/binary, 0:8>>.
-
--spec get_cstring(binary()) -> {bson:utf8(), binary()}.
-get_cstring(Bin) -> % list_to_tuple (binary:split (Bin, <<0>>)).
-  {Pos, _Len} = binary:match(Bin, <<0>>), % _Len = 1 but don't match 1 to avoid check
-  <<UBin:Pos/binary, 0:8, Rest/binary>> = Bin,
-  {UBin, Rest}.
-
--spec put_document(bson:document()) -> binary().
-put_document(Document) ->
-  Bin = bson:doc_foldl(fun put_field_accum/3, <<>>, Document),
-  <<?put_int32(byte_size(Bin) + 5), Bin/binary, 0:8>>.
-
 
 %% @private
 get_field(<<1:8, _/binary>>, _, Bin1) ->
@@ -120,12 +128,6 @@ get_string(<<?get_int32(N), Bin/binary>>) ->
   Size = N - 1,
   <<UBin:Size/binary, 0:8, Rest/binary>> = Bin,
   {UBin, Rest}.
-
-%% @private
-put_field_accum(Label, Value, Bin) when is_atom(Label) ->
-  <<Bin/binary, (put_field(atom_to_binary(Label, utf8), Value))/binary>>;
-put_field_accum(Label, Value, Bin) when is_binary(Label) ->
-  <<Bin/binary, (put_field(Label, Value))/binary>>.
 
 -spec get_document(binary()) -> {bson:document(), binary()}.
 get_document(<<?get_int32(N), Bin/binary>>) ->

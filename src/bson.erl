@@ -30,49 +30,53 @@
 
 -type label() :: binary() | atom().
 
--spec doc_foldl(fun ((label(), value(), A) -> A), A, document()) -> A.
 %% @doc Reduce document by applying given function to each field with result of previous field's
 %% application, starting with given initial result.
-doc_foldl(Fun, Acc, Doc) -> doc_foldlN(Fun, Acc, Doc, 0, tuple_size(Doc) div 2).
+-spec doc_foldl(fun ((label(), value(), A) -> A), A, document() | map()) -> A.
+doc_foldl(Fun, Acc, Doc) when is_map(Doc) ->
+  maps:fold(Fun, Acc, Doc);
+doc_foldl(Fun, Acc, Doc) ->
+  doc_foldlN(Fun, Acc, Doc, 0, tuple_size(Doc) div 2).
+
+%% @doc Fold over fields from first index (inclusive) to second index (exclusive), zero-based index.
 
 -spec doc_foldlN(fun ((label(), value(), A) -> A), A, document(), integer(), integer()) -> A.
-%% @doc Fold over fields from first index (inclusive) to second index (exclusive), zero-based index.
 doc_foldlN(_, Acc, _, High, High) -> Acc;
 doc_foldlN(Fun, Acc, Doc, Low, High) ->
   Acc1 = Fun(element(Low * 2 + 1, Doc), element(Low * 2 + 2, Doc), Acc),
   doc_foldlN(Fun, Acc1, Doc, Low + 1, High).
 
--spec doc_foldr(fun ((label(), value(), A) -> A), A, document()) -> A.
 %% @doc Same as doc_foldl/3 except apply fields in reverse order
+-spec doc_foldr(fun ((label(), value(), A) -> A), A, document()) -> A.
 doc_foldr(Fun, Acc, Doc) -> doc_foldrN(Fun, Acc, Doc, 0, tuple_size(Doc) div 2).
 
--spec doc_foldrN(fun ((label(), value(), A) -> A), A, document(), integer(), integer()) -> A.
 %% @doc Fold over fields from second index (exclusive) to first index (inclusive), zero-based index.
+-spec doc_foldrN(fun ((label(), value(), A) -> A), A, document(), integer(), integer()) -> A.
 doc_foldrN(_, Acc, _, Low, Low) -> Acc;
 doc_foldrN(Fun, Acc, Doc, Low, High) ->
   Acc1 = Fun(element(High * 2 - 1, Doc), element(High * 2, Doc), Acc),
   doc_foldrN(Fun, Acc1, Doc, Low, High - 1).
 
--spec fields(document()) -> [{label(), value()}].
 %% @doc Convert document to a list of all its fields
+-spec fields(document()) -> [{label(), value()}].
 fields(Doc) -> doc_foldr(fun(Label, Value, List) -> [{Label, Value} | List] end, [], Doc).
 
--spec document([{label(), value()}]) -> document().
 %% @doc Convert list of fields to a document
+-spec document([{label(), value()}]) -> document().
 document(Fields) -> list_to_tuple(flatten(Fields)).
 
--spec flatten([{label(), value()}]) -> [label() | value()].
 %% @doc Flatten list by removing tuple constructors
+-spec flatten([{label(), value()}]) -> [label() | value()].
 flatten([]) -> [];
 flatten([{Label, Value} | Fields]) -> [Label, Value | flatten(Fields)].
 
--spec lookup(label(), document()) -> value() | {}.
 %% @doc Value of field in document if there
+-spec lookup(label(), document()) -> value() | {}.
 lookup(Label, Doc) ->
   lookup(Label, Doc, {}).
 
--spec lookup(label(), document(), value()) -> value().
 %% @doc Value of field in document if there or default
+-spec lookup(label(), document(), value()) -> value().
 lookup(Label, Doc, Default) when is_atom(Label) ->
   lookup(atom_to_binary(Label, utf8), Doc, Default);
 lookup(Label, Doc, Default) ->
@@ -84,12 +88,12 @@ lookup(Label, Doc, Default) ->
       lookup(Parts, Doc, fun(Index) -> lookup(hd(tl(Parts)), element(Index * 2 + 2, Doc), Default) end, Default)
   end.
 
--spec find(label(), document()) -> integer() | {}.
 %% @doc Index of field in document if there
+-spec find(label(), document()) -> integer() | {}.
 find(Label, Doc) -> findN(Label, Doc, 0, tuple_size(Doc) div 2).
 
--spec findN(label(), document(), integer(), integer()) -> integer() | {}.
 %% @doc Find field index in document from first index (inclusive) to second index (exclusive).
+-spec findN(label(), document(), integer(), integer()) -> integer() | {}.
 findN(_Label, _Doc, High, High) -> {};
 findN(Label, Doc, Low, High) ->
   case element(Low * 2 + 1, Doc) of
@@ -102,8 +106,8 @@ findN(Label, Doc, Low, High) ->
     _ -> findN(Label, Doc, Low + 1, High)
   end.
 
--spec at(label(), document()) -> value().
 %% @doc Value of field in document, error if missing
+-spec at(label(), document()) -> value().
 at(Label, Document) when is_atom(Label) ->
   at(atom_to_binary(Label, utf8), Document);
 at(Label, Document) ->
@@ -112,8 +116,8 @@ at(Label, Document) ->
     Value -> Value
   end.
 
--spec include([label()], document()) -> document().
 %% @doc Project given fields of document
+-spec include([label()], document()) -> document().
 include(Labels, Document) ->
   Fun =
     fun(Label, Doc) ->
@@ -124,16 +128,16 @@ include(Labels, Document) ->
     end,
   list_to_tuple(lists:foldr(Fun, [], Labels)).
 
--spec exclude([label()], document()) -> document().
 %% @doc Remove given fields from document
+-spec exclude([label()], document()) -> document().
 exclude(Labels, Document) ->
   Fun = fun(Label, Value, Doc) -> case lists:member(Label, Labels) of
                                     false -> [Label, Value | Doc];
                                     true -> Doc end end,
   list_to_tuple(doc_foldr(Fun, [], Document)).
 
--spec update(label(), value(), document()) -> document().
 %% @doc Replace field with new value, adding to end if new
+-spec update(label(), value(), document()) -> document().
 update(Label, Value, Document) when is_atom(Label) ->
   update(atom_to_binary(Label, utf8), Value, Document);
 update(Label, Value, Document) ->
@@ -157,8 +161,8 @@ update(Label, Value, Document) ->
         end)
   end.
 
--spec merge(document(), document()) -> document().
 %% @doc First doc overrides second with new fields added at end of second doc
+-spec merge(document(), document()) -> document().
 merge(UpDoc, BaseDoc) ->
   Fun = fun(Label, Value, Doc) -> update(Label, Value, Doc) end,
   doc_foldl(Fun, BaseDoc, UpDoc).
@@ -169,8 +173,8 @@ merge(UpDoc, BaseDoc, Fun) ->
   Dict2 = orddict:from_list(bson:fields(BaseDoc)),
   bson:document(orddict:merge(Fun, Dict1, Dict2)).
 
--spec append(document(), document()) -> document().
 %% @doc Append two documents together
+-spec append(document(), document()) -> document().
 append(Doc1, Doc2) -> list_to_tuple(tuple_to_list(Doc1) ++ tuple_to_list(Doc2)).
 
 % Value %
@@ -210,8 +214,8 @@ minmaxkey().
 % An Erlang string() is a list of unicode characters (codepoints), but this list must be converted to utf-8 binary for use in Bson.
 %% Call utf8/1 to do this, or encode pure ascii literals directly as `<<"abc">>' and non-pure ascii literals as `<<"a�c"/utf8>>'.
 
--spec utf8(unicode:chardata()) -> utf8().
 %% @doc Convert string to utf8 binary. string() is a subtype of unicode:chardata().
+-spec utf8(unicode:chardata()) -> utf8().
 utf8(CharData) ->
   case unicode:characters_to_binary(CharData) of
     {error, _Bin, _Rest} -> erlang:error(unicode_error, [CharData]);
@@ -219,8 +223,8 @@ utf8(CharData) ->
     Bin -> Bin
   end.
 
--spec str(unicode:chardata()) -> string().
 %% @doc Convert utf8 binary to string. utf8() is a subtype of unicode:chardata().
+-spec str(unicode:chardata()) -> string().
 str(CharData) ->
   case unicode:characters_to_list(CharData) of
     {error, _Bin, _Rest} -> erlang:error(unicode_error, [CharData]);
@@ -252,12 +256,12 @@ str(CharData) ->
 -type unixtime() :: {integer(), integer(), integer()}. % {MegaSecs, Secs, MicroSecs}
 % Unix time in Erlang now/os:timstamp format, but only to millisecond precision when serialized.
 
--spec timenow() -> unixtime(). % IO
 % Current unixtime to millisecond precision, ie. MicroSecs is always a multiple of 1000.
+-spec timenow() -> unixtime(). % IO
 timenow() -> ms_precision(os:timestamp()).
 
--spec ms_precision(unixtime()) -> unixtime().
 %% @doc Truncate microsecs to millisecs since bson drops microsecs anyway, so time will be equal before and after serialization.
+-spec ms_precision(unixtime()) -> unixtime().
 ms_precision({MegaSecs, Secs, MicroSecs}) ->
   {MegaSecs, Secs, MicroSecs div 1000 * 1000}.
 
@@ -282,8 +286,8 @@ unixtime_to_secs({MegaSecs, Secs, _}) -> MegaSecs * 1000000 + Secs.
 objectid(UnixSecs, MachineAndProcId, Count) ->
   {<<UnixSecs:32/big, MachineAndProcId:5/binary, Count:24/big>>}.
 
--spec objectid_time(objectid()) -> unixtime().
 %% @doc Time when object id was generated
+-spec objectid_time(objectid()) -> unixtime().
 objectid_time({<<UnixSecs:32/big, _:64>>}) -> secs_to_unixtime(UnixSecs).
 
 map_to_bson(Map) ->
