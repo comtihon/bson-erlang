@@ -1,4 +1,4 @@
-This is the BSON implementation for Erlang.
+# This is the BSON implementation for Erlang.
 
 BSON is a record-like data type with a standard binary representation defined at <http://www.bsonspec.org>. This implements version 1.0 of that spec. The standard binary form allows for easy data interchange between systems. In particular, [MongoDB](http://www.mongodb.org) uses it for exchanging data between the MongoDB server and its clients.
 
@@ -22,3 +22,16 @@ For the full list of `bson:value()` types see the [bson](http://github.com/mongo
 There are some special `bson:value()` types like `bson:javascript()` that are tagged tuples, eg. `{javascript, {x,1}, <<"function (y) {return y + x}">>}`. But embedded documents are also tuples, so how do we distinguish between the two? Tagged tuple `bson:value()` values intentionally have an odd number of elements, to distinguish them from documents, which always have an even number of elements, as they store key-value pairs.
 
 [API Docs](http://api.mongodb.org/erlang/bson/) - Documentation generated from source code comments.
+
+## Map syntax
+
+Erlang Maps support is enabled.
+To encode map just use `bson_binary:put_document/1`:
+
+	MapWithMap = #{<<"map">> => true, <<"simple">> => <<"not">>, <<"why">> => #{<<"because">> => <<"with map">>, <<"ok">> => true}},
+    Encoded3 = bson_binary:put_document(MapWithMap).
+Map will be treated as bson document.
+To decode binary not as bson document, but as map - use `bson_binary:get_map/1`:
+
+	{GotMap3, <<>>} = bson_binary:get_map(Encoded3).
+See `bson_tests:maps_get_test/0` for more details.
