@@ -172,14 +172,14 @@ put_value_accum(Value, {N, Bin}) ->
 get_array(<<?get_int32(N), Bin/binary>>, Type) ->
   Size = N - 5,
   <<DBin:Size/binary, 0:8, Bin1/binary>> = Bin,
-  Array = get_values(DBin, Type),
+  Array = get_values(DBin, [], Type),
   {Array, Bin1}.
 
 %% @private
-get_values(<<>>, _) -> [];
-get_values(Bin, Type) ->
+get_values(<<>>, Acc, _) -> lists:reverse(Acc);
+get_values(Bin, Acc, Type) ->
   {_, Value, Bin1} = get_field(Bin, Type),
-  [Value | get_values(Bin1, Type)].
+  get_values(Bin1, [Value | Acc], Type).
 
 -type bintype() :: bin | function | uuid | md5 | userdefined.
 
@@ -204,8 +204,7 @@ put_closure(Code, Env) ->
 
 %% @private
 -spec get_closure(binary()) -> {bson:utf8(), bson:document(), binary()}.
-get_closure(<<?get_int32(N), Bin/binary>>) ->
-  _ = N - 4, %TODO?
+get_closure(<<?get_int32(_), Bin/binary>>) ->
   {Code, Bin1} = get_string(Bin),
   {Env, Bin2} = get_document(Bin1),
   {Code, Env, Bin2}.
