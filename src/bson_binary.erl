@@ -52,7 +52,8 @@ get_fields(<<>>, Acc) when is_map(Acc) -> Acc;
 get_fields(<<>>, Acc) -> lists:reverse(Acc);
 get_fields(Bin, Acc) when is_map(Acc) ->
   {Name, Value, Bin1} = get_field(Bin, map),
-  get_fields(Bin1, Acc#{Name => Value});
+  List = maps:to_list(Acc),
+  get_fields(Bin1, maps:from_list([{Name, Value} | List]));
 get_fields(Bin, Acc) ->
   {Name, Value, Bin1} = get_field(Bin, normal),
   get_fields(Bin1, [Value, Name | Acc]).

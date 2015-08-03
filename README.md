@@ -35,3 +35,8 @@ To decode binary not as bson document, but as map - use `bson_binary:get_map/1`:
 
 	{GotMap3, <<>>} = bson_binary:get_map(Encoded3).
 See `bson_tests:maps_get_test/0` for more details.
+
+
+## Legacy branching
+If you use Erlang less than 17 - use tag `v0.2`, as it is without maps (or `v0.1.4`, as it is completely without maps).
+If you use Erlang 17 - use `legacy` branch.
