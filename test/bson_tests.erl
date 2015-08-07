@@ -127,3 +127,22 @@ maps_get_test() ->
   Encoded3 = bson_binary:put_document(MapWithMap),
   {GotMap3, <<>>} = bson_binary:get_map(Encoded3),
   ?assertEqual(MapWithMap, GotMap3).
+
+maps_flattering_test() ->
+  Map =
+    #{
+      <<"user">> => #{<<"login">> => <<"test">>, <<"password">> => 1234},
+      <<"personal">> => #{<<"name">> => <<"test">>, <<"country">> => #{<<"name">> => <<"USSR">>, <<"domen">> => <<"su">>}},
+      <<"email">> => <<"test@test.su">>
+    },
+  Result = bson:flatten_map(Map),
+  FlattenMap =
+    #{
+      <<"user.login">> => <<"test">>,
+      <<"user.password">> => 1234,
+      <<"personal.name">> => <<"test">>,
+      <<"personal.country.name">> => <<"USSR">>,
+      <<"personal.country.domen">> => <<"su">>,
+      <<"email">> => <<"test@test.su">>
+    },
+  ?assertEqual(FlattenMap, Result).

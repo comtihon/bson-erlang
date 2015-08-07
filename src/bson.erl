@@ -11,7 +11,7 @@
 -export_type([objectid/0, unixsecs/0]).
 
 -export([lookup/2, lookup/3, at/2, include/2, exclude/2, update/3, merge/2, merge/3, append/2]).
--export([doc_foldl/3, doc_foldr/3, fields/1, document/1]).
+-export([doc_foldl/3, doc_foldr/3, fields/1, document/1, flatten_map/1]).
 -export([utf8/1, str/1]).
 -export([timenow/0, ms_precision/1, secs_to_unixtime/1, unixtime_to_secs/1]).
 -export([objectid/3, objectid_time/1]).
@@ -289,6 +289,27 @@ objectid(UnixSecs, MachineAndProcId, Count) ->
 -spec objectid_time(objectid()) -> unixtime().
 objectid_time({<<UnixSecs:32/big, _:64>>}) -> secs_to_unixtime(UnixSecs).
 
+%% Flattens map, add dot notation to all nested objects
+-spec flatten_map(map()) -> map().
+flatten_map(Map) ->
+  List = flatten(<<>>, Map, []),
+  maps:from_list(List).
+
+
+%% @private
+flatten(Key, Map, Acc) when is_map(Map) ->
+  MapList = maps:to_list(Map),
+  lists:foldl(fun({K, V}, Res) -> flatten(<<(append_dot(Key))/binary, K/binary>>, V, Res) end, Acc, MapList);
+flatten(Key, Value, Acc) ->
+  [{Key, Value} | Acc].
+
+%% @private
+append_dot(<<>>) -> <<>>;
+append_dot(Key) when is_atom(Key) -> append_dot(atom_to_binary(Key, utf8));
+append_dot(Key) when is_integer(Key) -> append_dot(integer_to_binary(Key));
+append_dot(Key) when is_float(Key) -> append_dot(float_to_binary(Key));
+append_dot(Key) when is_list(Key) -> append_dot(list_to_binary(Key));
+append_dot(Key) -> <<Key/binary, <<".">>/binary>>.
 
 %% @private
 lookup(Parts, Doc, GetFun, Default) ->
