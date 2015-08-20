@@ -44,6 +44,8 @@ get_map(<<?get_int32(N), Bin/binary>>) ->
 %% @private
 put_field_accum(Label, Value, Bin) when is_atom(Label) ->
   <<Bin/binary, (put_field(atom_to_binary(Label, utf8), Value))/binary>>;
+put_field_accum(Label, Value, Bin) when is_integer(Label) ->
+  <<Bin/binary, (put_field(integer_to_binary(Label), Value))/binary>>;
 put_field_accum(Label, Value, Bin) when is_binary(Label) ->
   <<Bin/binary, (put_field(Label, Value))/binary>>.
 
