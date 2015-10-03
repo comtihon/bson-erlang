@@ -71,6 +71,8 @@ put_field(N, {javascript, {}, Code}) -> <<?put_tagname(13, N), (put_string(Code)
 put_field(N, {javascript, Env, Code}) -> <<?put_tagname(15, N), (put_closure(Code, Env))/binary>>;
 put_field(N, {mongostamp, Inc, Time}) -> <<?put_tagname(17, N), ?put_int32(Inc), ?put_int32(Time)>>;
 put_field(N, UnixTime = {_, _, _}) -> <<?put_tagname(9, N), (put_unixtime(UnixTime))/binary>>;
+put_field(N, '+infinity') -> <<?put_tagname(1, N), 0, 0, 0, 0, 0, 0, 240, 127>>;
+put_field(N, '-infinity') -> <<?put_tagname(1, N), 0, 0, 0, 0, 0, 0, 240, 255>>;
 put_field(N, V) when is_float(V) -> <<?put_tagname(1, N), ?put_float(V)>>;
 put_field(N, V) when is_binary(V) -> <<?put_tagname(2, N), (put_string(V))/binary>>;
 put_field(N, V) when is_tuple(V) -> <<?put_tagname(3, N), (put_document(V))/binary>>;
@@ -84,8 +86,11 @@ put_field(N, V) -> erlang:error(bad_bson, [N, V]).
 
 %% @private
 get_field(<<1:8, _/binary>>, _, Bin1, _) ->
-  <<?get_float(N), Bin2/binary>> = Bin1,
-  {N, Bin2};
+  case Bin1 of
+    <<0, 0, 0, 0, 0, 0, 240, 127, Bin2/binary>> -> {'+infinity', Bin2};
+    <<0, 0, 0, 0, 0, 0, 240, 255, Bin2/binary>> -> {'-infinity', Bin2};
+    <<?get_float(N), Bin2/binary>>              -> {N, Bin2}
+  end;
 get_field(<<2:8, _/binary>>, _, Bin1, _) ->
   get_string(Bin1);
 get_field(<<3:8, _/binary>>, _, Bin1, map) ->
