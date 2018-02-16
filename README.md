@@ -1,6 +1,6 @@
 # This is the BSON implementation for Erlang.
 [![Build Status](https://travis-ci.org/comtihon/bson-erlang.svg?branch=master)](https://travis-ci.org/comtihon/bson-erlang)
-[![Coon](https://coon.justtech.blog/badge?full_name=comtihon/bson-erlang)](https://coon.justtech.blog)
+[![Enot](https://enot.justtech.blog/badge?full_name=comtihon/bson-erlang)](https://enot.justtech.blog)
 
 BSON is a record-like data type with a standard binary representation defined at <http://www.bsonspec.org>. This implements version 1.0 of that spec. The standard binary form allows for easy data interchange between systems. In particular, [MongoDB](http://www.mongodb.org) uses it for exchanging data between the MongoDB server and its clients.
 
