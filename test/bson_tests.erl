@@ -146,3 +146,18 @@ maps_flattering_test() ->
       <<"email">> => <<"test@test.su">>
     },
   ?assertEqual(FlattenMap, Result).
+
+infinity_test() ->
+  Encoded = <<16#2b, 16#00, 16#00, 16#00, 16#01, 16#2b, 16#69, 16#6e, 16#66,
+              16#69, 16#6e, 16#69, 16#74, 16#79, 16#00, 16#00, 16#00, 16#00,
+              16#00, 16#00, 16#00, 16#f0, 16#7f, 16#01, 16#2d, 16#69, 16#6e,
+              16#66, 16#69, 16#6e, 16#69, 16#74, 16#79, 16#00, 16#00, 16#00,
+              16#00, 16#00, 16#00, 16#00, 16#f0, 16#ff, 16#00>>,
+
+  ?assertEqual(
+    {{<<"+infinity">>, '+infinity', <<"-infinity">>, '-infinity'}, <<>>},
+    bson_binary:get_document(Encoded)),
+
+  Doc = #{<<"+infinity">> => '+infinity', <<"-infinity">> => '-infinity'},
+  Encoded2 = bson_binary:put_document(Doc),
+  ?assertEqual(Encoded, Encoded2).
