@@ -57,6 +57,7 @@ binary_test() ->
     <<"eeeeeeeee">>, {bin, bin, VBin},
     <<"f">>, {bin, function, VBin},
     <<"g">>, {bin, uuid, Bin},
+    <<"g4">>, {bin, uuid4, Bin},
     <<"h">>, {bin, md5, VBin},
     <<"i">>, {bin, userdefined, Bin},
     <<"j">>, bson:objectid(bson:unixtime_to_secs(Time), <<2:24/big, 3:16/big>>, 4),
