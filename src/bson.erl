@@ -4,7 +4,7 @@
 
 -export_type([document/0, label/0, value/0]).
 -export_type([arr/0]).
--export_type([bin/0, bfunction/0, uuid/0, uuid4/0, md5/0, userdefined/0]).
+-export_type([bin/0, bfunction/0, bin_old/0, uuid_old/0, uuid/0, md5/0, userdefined/0]).
 -export_type([mongostamp/0, minmaxkey/0]).
 -export_type([utf8/0, regex/0, unixtime/0]).
 -export_type([javascript/0]).
@@ -185,8 +185,9 @@ document() |
 arr() |
 bin() |
 bfunction() |
+bin_old() |
+uuid_old() |
 uuid() |
-uuid4() |
 md5() |
 userdefined() |
 objectid() |
@@ -236,8 +237,9 @@ str(CharData) ->
 
 -type bin() :: {bin, bin, binary()}.
 -type bfunction() :: {bin, function, binary()}.
+-type bin_old() :: {bin, bin_old, binary()}.
+-type uuid_old() :: {bin, uuid_old, binary()}.
 -type uuid() :: {bin, uuid, binary()}.
--type uuid4() :: {bin, uuid4, binary()}.
 -type md5() :: {bin, md5, binary()}.
 -type userdefined() :: {bin, userdefined, binary()}.
 
