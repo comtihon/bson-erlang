@@ -21,7 +21,7 @@ get_cstring(Bin) -> % list_to_tuple (binary:split (Bin, <<0>>)).
   <<UBin:Pos/binary, 0:8, Rest/binary>> = Bin,
   {UBin, Rest}.
 
--spec put_document(bson:document()) -> binary().
+-spec put_document(bson:document() | map()) -> binary().
 put_document(Document) ->
   Bin = bson:doc_foldl(fun put_field_accum/3, <<>>, Document),
   <<?put_int32(byte_size(Bin) + 5), Bin/binary, 0:8>>.
