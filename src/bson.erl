@@ -309,10 +309,6 @@ flatten(Key, Value, Acc) ->
 
 %% @private
 append_dot(<<>>) -> <<>>;
-append_dot(Key) when is_atom(Key) -> append_dot(atom_to_binary(Key, utf8));
-append_dot(Key) when is_integer(Key) -> append_dot(integer_to_binary(Key));
-append_dot(Key) when is_float(Key) -> append_dot(float_to_binary(Key));
-append_dot(Key) when is_list(Key) -> append_dot(list_to_binary(Key));
 append_dot(Key) -> <<Key/binary, <<".">>/binary>>.
 
 %% @private
