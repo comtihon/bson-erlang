@@ -84,8 +84,13 @@ put_field(N, V) -> erlang:error(bad_bson, [N, V]).
 
 %% @private
 get_field(<<1:8, _/binary>>, _, Bin1, _) ->
-  <<?get_float(N), Bin2/binary>> = Bin1,
-  {N, Bin2};
+  case Bin1 of
+    <<?get_float(N), Bin2/binary>> ->
+      {N, Bin2};
+    _ ->
+      <<_:64, Bin2/binary>> = Bin1,
+      {0.0, Bin2}
+      end;
 get_field(<<2:8, _/binary>>, _, Bin1, _) ->
   get_string(Bin1);
 get_field(<<3:8, _/binary>>, _, Bin1, map) ->
